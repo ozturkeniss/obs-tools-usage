@@ -159,6 +159,30 @@ func (r *Repository) GetTopMostExpensive(limit int) ([]Product, error) {
 	return products[:limit], nil
 }
 
+// GetLowStockProducts returns products with low stock
+func (r *Repository) GetLowStockProducts(maxStock int) ([]Product, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
+	var lowStockProducts []Product
+	
+	for _, product := range r.products {
+		if maxStock == 1 {
+			// For stock = 1
+			if product.Stock == 1 {
+				lowStockProducts = append(lowStockProducts, *product)
+			}
+		} else {
+			// For stock < maxStock
+			if product.Stock < maxStock {
+				lowStockProducts = append(lowStockProducts, *product)
+			}
+		}
+	}
+	
+	return lowStockProducts, nil
+}
+
 // GetProductCount returns the total number of products
 func (r *Repository) GetProductCount() int {
 	r.mu.RLock()
