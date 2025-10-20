@@ -131,6 +131,34 @@ func (r *Repository) GetNextID() int {
 	return id
 }
 
+// GetTopMostExpensive returns the most expensive products
+func (r *Repository) GetTopMostExpensive(limit int) ([]Product, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
+	// Convert map to slice
+	products := make([]Product, 0, len(r.products))
+	for _, product := range r.products {
+		products = append(products, *product)
+	}
+	
+	// Sort by price in descending order
+	for i := 0; i < len(products); i++ {
+		for j := i + 1; j < len(products); j++ {
+			if products[i].Price < products[j].Price {
+				products[i], products[j] = products[j], products[i]
+			}
+		}
+	}
+	
+	// Return only the requested number of products
+	if limit > len(products) {
+		limit = len(products)
+	}
+	
+	return products[:limit], nil
+}
+
 // GetProductCount returns the total number of products
 func (r *Repository) GetProductCount() int {
 	r.mu.RLock()
