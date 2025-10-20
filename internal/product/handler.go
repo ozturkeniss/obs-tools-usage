@@ -25,6 +25,8 @@ func SetupRoutes(r *gin.Engine, service *Service) {
 	products := r.Group("/products")
 	{
 		products.GET("", handler.GetAllProducts)
+		products.GET("/top-5", handler.GetTop5MostExpensive)
+		products.GET("/top-10", handler.GetTop10MostExpensive)
 		products.GET("/:id", handler.GetProductByID)
 		products.POST("", handler.CreateProduct)
 		products.PUT("/:id", handler.UpdateProduct)
@@ -122,6 +124,36 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
+}
+
+// GetTop5MostExpensive returns the 5 most expensive products
+func (h *Handler) GetTop5MostExpensive(c *gin.Context) {
+	products, err := h.service.GetTopMostExpensive(5)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"products": products,
+		"count": len(products),
+		"description": "Top 5 most expensive products",
+	})
+}
+
+// GetTop10MostExpensive returns the 10 most expensive products
+func (h *Handler) GetTop10MostExpensive(c *gin.Context) {
+	products, err := h.service.GetTopMostExpensive(10)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"products": products,
+		"count": len(products),
+		"description": "Top 10 most expensive products",
+	})
 }
 
 // HealthCheck returns service health status
