@@ -29,6 +29,7 @@ func SetupRoutes(r *gin.Engine, service *Service) {
 		products.GET("/top-10", handler.GetTop10MostExpensive)
 		products.GET("/low-stock-1", handler.GetLowStockProducts1)
 		products.GET("/low-stock-10", handler.GetLowStockProducts10)
+		products.GET("/category/:category", handler.GetProductsByCategory)
 		products.GET("/:id", handler.GetProductByID)
 		products.POST("", handler.CreateProduct)
 		products.PUT("/:id", handler.UpdateProduct)
@@ -185,6 +186,28 @@ func (h *Handler) GetLowStockProducts10(c *gin.Context) {
 		"products": products,
 		"count": len(products),
 		"description": "Products with stock < 10",
+	})
+}
+
+// GetProductsByCategory returns products by category
+func (h *Handler) GetProductsByCategory(c *gin.Context) {
+	category := c.Param("category")
+	if category == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Category parameter is required"})
+		return
+	}
+	
+	products, err := h.service.GetProductsByCategory(category)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"products": products,
+		"count": len(products),
+		"category": category,
+		"description": "Products in category: " + category,
 	})
 }
 
