@@ -183,6 +183,22 @@ func (r *Repository) GetLowStockProducts(maxStock int) ([]Product, error) {
 	return lowStockProducts, nil
 }
 
+// GetProductsByCategory returns products by category
+func (r *Repository) GetProductsByCategory(category string) ([]Product, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
+	var categoryProducts []Product
+	
+	for _, product := range r.products {
+		if product.Category == category {
+			categoryProducts = append(categoryProducts, *product)
+		}
+	}
+	
+	return categoryProducts, nil
+}
+
 // GetProductCount returns the total number of products
 func (r *Repository) GetProductCount() int {
 	r.mu.RLock()
