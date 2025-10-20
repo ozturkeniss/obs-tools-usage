@@ -27,6 +27,8 @@ func SetupRoutes(r *gin.Engine, service *Service) {
 		products.GET("", handler.GetAllProducts)
 		products.GET("/top-5", handler.GetTop5MostExpensive)
 		products.GET("/top-10", handler.GetTop10MostExpensive)
+		products.GET("/low-stock-1", handler.GetLowStockProducts1)
+		products.GET("/low-stock-10", handler.GetLowStockProducts10)
 		products.GET("/:id", handler.GetProductByID)
 		products.POST("", handler.CreateProduct)
 		products.PUT("/:id", handler.UpdateProduct)
@@ -153,6 +155,36 @@ func (h *Handler) GetTop10MostExpensive(c *gin.Context) {
 		"products": products,
 		"count": len(products),
 		"description": "Top 10 most expensive products",
+	})
+}
+
+// GetLowStockProducts1 returns products with stock = 1
+func (h *Handler) GetLowStockProducts1(c *gin.Context) {
+	products, err := h.service.GetLowStockProducts(1)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"products": products,
+		"count": len(products),
+		"description": "Products with stock = 1",
+	})
+}
+
+// GetLowStockProducts10 returns products with stock < 10
+func (h *Handler) GetLowStockProducts10(c *gin.Context) {
+	products, err := h.service.GetLowStockProducts(10)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"products": products,
+		"count": len(products),
+		"description": "Products with stock < 10",
 	})
 }
 
