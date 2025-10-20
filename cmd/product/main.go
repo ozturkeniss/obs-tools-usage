@@ -30,6 +30,7 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(corsMiddleware())
 	r.Use(product.RequestIDMiddleware())
+	r.Use(product.HTTPLoggingMiddleware())
 
 	// Initialize product service
 	productService := product.NewService()

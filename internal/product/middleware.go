@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -58,4 +59,37 @@ func GetRequestIDFromContext(c *gin.Context) string {
 		}
 	}
 	return ""
+}
+
+// HTTPLoggingMiddleware logs HTTP requests and responses
+func HTTPLoggingMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get logger with request ID
+		logger := GetLoggerFromContext(c)
+		
+		// Log incoming request
+		logger.WithFields(logrus.Fields{
+			"method":     c.Request.Method,
+			"path":       c.Request.URL.Path,
+			"query":      c.Request.URL.RawQuery,
+			"user_agent": c.Request.UserAgent(),
+			"ip":         c.ClientIP(),
+		}).Info("Incoming HTTP request")
+		
+		// Start timer
+		start := time.Now()
+		
+		// Process request
+		c.Next()
+		
+		// Calculate duration
+		duration := time.Since(start)
+		
+		// Log response
+		logger.WithFields(logrus.Fields{
+			"status_code": c.Writer.Status(),
+			"duration_ms": duration.Milliseconds(),
+			"response_size": c.Writer.Size(),
+		}).Info("HTTP request completed")
+	}
 }
