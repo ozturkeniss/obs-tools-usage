@@ -105,6 +105,15 @@ func (s *Service) GetTopMostExpensive(limit int) ([]Product, error) {
 	return s.repository.GetTopMostExpensive(limit)
 }
 
+// GetLowStockProducts returns products with low stock
+func (s *Service) GetLowStockProducts(maxStock int) ([]Product, error) {
+	if maxStock < 0 {
+		return nil, errors.New("max stock must be non-negative")
+	}
+	
+	return s.repository.GetLowStockProducts(maxStock)
+}
+
 // validateProduct validates product data
 func (s *Service) validateProduct(product Product) error {
 	if product.Name == "" {
