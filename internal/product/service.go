@@ -96,6 +96,15 @@ func (s *Service) DeleteProduct(id int) error {
 	return nil
 }
 
+// GetTopMostExpensive returns the most expensive products
+func (s *Service) GetTopMostExpensive(limit int) ([]Product, error) {
+	if limit <= 0 {
+		return nil, errors.New("limit must be greater than 0")
+	}
+	
+	return s.repository.GetTopMostExpensive(limit)
+}
+
 // validateProduct validates product data
 func (s *Service) validateProduct(product Product) error {
 	if product.Name == "" {
