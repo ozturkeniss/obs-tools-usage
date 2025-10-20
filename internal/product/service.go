@@ -114,6 +114,15 @@ func (s *Service) GetLowStockProducts(maxStock int) ([]Product, error) {
 	return s.repository.GetLowStockProducts(maxStock)
 }
 
+// GetProductsByCategory returns products by category
+func (s *Service) GetProductsByCategory(category string) ([]Product, error) {
+	if category == "" {
+		return nil, errors.New("category cannot be empty")
+	}
+	
+	return s.repository.GetProductsByCategory(category)
+}
+
 // validateProduct validates product data
 func (s *Service) validateProduct(product Product) error {
 	if product.Name == "" {
