@@ -3,6 +3,7 @@ package product
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds the configuration for the product service
@@ -14,6 +15,7 @@ type Config struct {
 	LogOutput   string
 	LogDir      string
 	LogFile     string
+	LogRotation LogRotationConfig
 	Database    DatabaseConfig
 }
 
@@ -25,6 +27,15 @@ type DatabaseConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+// LogRotationConfig holds log rotation configuration
+type LogRotationConfig struct {
+	Enabled   bool
+	MaxSize   int    // Maximum size in MB
+	MaxAge    int    // Maximum age in days
+	MaxBackups int   // Maximum number of backup files
+	Compress  bool   // Whether to compress old log files
 }
 
 // LoadConfig loads configuration from environment variables
@@ -39,6 +50,13 @@ func LoadConfig() *Config {
 		LogOutput:   getLogOutputFromEnv(environment),
 		LogDir:      getEnv("LOG_DIR", "./logs"),
 		LogFile:     getEnv("LOG_FILE", "product-service.log"),
+		LogRotation: LogRotationConfig{
+			Enabled:    getLogRotationEnabled(),
+			MaxSize:    getLogRotationMaxSize(),
+			MaxAge:     getLogRotationMaxAge(),
+			MaxBackups: getLogRotationMaxBackups(),
+			Compress:   getLogRotationCompress(),
+		},
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),
@@ -138,4 +156,46 @@ func getLogOutputFromEnv(environment string) string {
 	default:
 		return "console"
 	}
+}
+
+// getLogRotationEnabled determines if log rotation is enabled
+func getLogRotationEnabled() bool {
+	enabled := getEnv("LOG_ROTATION_ENABLED", "true")
+	return strings.ToLower(enabled) == "true"
+}
+
+// getLogRotationMaxSize returns the maximum size for log rotation
+func getLogRotationMaxSize() int {
+	maxSizeStr := getEnv("LOG_MAX_SIZE", "100")
+	maxSize, err := strconv.Atoi(maxSizeStr)
+	if err != nil {
+		return 100 // Default 100 MB
+	}
+	return maxSize
+}
+
+// getLogRotationMaxAge returns the maximum age for log rotation
+func getLogRotationMaxAge() int {
+	maxAgeStr := getEnv("LOG_MAX_AGE", "30")
+	maxAge, err := strconv.Atoi(maxAgeStr)
+	if err != nil {
+		return 30 // Default 30 days
+	}
+	return maxAge
+}
+
+// getLogRotationMaxBackups returns the maximum number of backup files
+func getLogRotationMaxBackups() int {
+	maxBackupsStr := getEnv("LOG_MAX_BACKUPS", "10")
+	maxBackups, err := strconv.Atoi(maxBackupsStr)
+	if err != nil {
+		return 10 // Default 10 backup files
+	}
+	return maxBackups
+}
+
+// getLogRotationCompress returns whether to compress old log files
+func getLogRotationCompress() bool {
+	compressStr := getEnv("LOG_COMPRESS", "true")
+	return strings.ToLower(compressStr) == "true"
 }
