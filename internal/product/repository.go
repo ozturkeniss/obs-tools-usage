@@ -2,24 +2,21 @@ package product
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Repository struct {
-	products map[int]*Product
-	nextID   int
-	mu       sync.RWMutex
-	logger   *logrus.Logger
+	db     *gorm.DB
+	logger *logrus.Logger
 }
 
-func NewRepository() *Repository {
+func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
-		products: make(map[int]*Product),
-		nextID:   1,
-		logger:   Logger,
+		db:     db,
+		logger: Logger,
 	}
 }
 
@@ -29,20 +26,28 @@ func (r *Repository) GetAllProducts() ([]Product, error) {
 	r.logger.WithFields(logrus.Fields{
 		"operation": "GetAllProducts",
 		"action":    "SELECT",
-	}).Info("Database operation started")
-	
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	
-	products := make([]Product, 0, len(r.products))
-	for _, product := range r.products {
-		products = append(products, *product)
-	}
+	}).Debug("Database operation started")
+
+	var products []Product
+	result := r.db.Find(&products)
 	
 	duration := time.Since(start)
 	
-	// Record Prometheus metrics
-	RecordDatabaseOperation("GetAllProducts", "success", duration)
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetAllProducts",
+			"action":    "SELECT",
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("GetAllProducts", "SELECT", false, duration)
+		return nil, result.Error
+	}
+
+	// Record successful database operation
+	RecordDatabaseOperation("GetAllProducts", "SELECT", true, duration)
 	
 	// Update business metrics
 	UpdateBusinessMetrics(products)
@@ -56,7 +61,7 @@ func (r *Repository) GetAllProducts() ([]Product, error) {
 		"duration_ms": duration.Milliseconds(),
 		"record_count": len(products),
 	}).Info("Database operation completed")
-	
+
 	return products, nil
 }
 
@@ -67,28 +72,42 @@ func (r *Repository) GetProductByID(id int) (*Product, error) {
 		"operation": "GetProductByID",
 		"action":    "SELECT",
 		"product_id": id,
-	}).Info("Database operation started")
+	}).Debug("Database operation started")
+
+	var product Product
+	result := r.db.First(&product, id)
 	
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	duration := time.Since(start)
 	
-	product, exists := r.products[id]
-	if !exists {
-		duration := time.Since(start)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			r.logger.WithFields(logrus.Fields{
+				"operation": "GetProductByID",
+				"action":    "SELECT",
+				"product_id": id,
+				"duration_ms": duration.Milliseconds(),
+			}).Warn("Product not found")
+			
+			// Record failed database operation
+			RecordDatabaseOperation("GetProductByID", "SELECT", false, duration)
+			return nil, errors.New("product not found")
+		}
+		
 		r.logger.WithFields(logrus.Fields{
 			"operation": "GetProductByID",
 			"action":    "SELECT",
 			"product_id": id,
+			"error":     result.Error.Error(),
 			"duration_ms": duration.Milliseconds(),
-			"error": "product not found",
-		}).Warn("Database operation failed")
-		return nil, errors.New("product not found")
+		}).Error("Database operation failed")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("GetProductByID", "SELECT", false, duration)
+		return nil, result.Error
 	}
-	
-	// Return a copy to avoid external modifications
-	productCopy := *product
-	
-	duration := time.Since(start)
+
+	// Record successful database operation
+	RecordDatabaseOperation("GetProductByID", "SELECT", true, duration)
 	
 	// Log slow queries
 	LogSlowQueries(r.logger.WithField("source", "repository"), "GetProductByID", duration, 50*time.Millisecond)
@@ -98,10 +117,9 @@ func (r *Repository) GetProductByID(id int) (*Product, error) {
 		"action":    "SELECT",
 		"product_id": id,
 		"duration_ms": duration.Milliseconds(),
-		"found": true,
 	}).Info("Database operation completed")
-	
-	return &productCopy, nil
+
+	return &product, nil
 }
 
 // CreateProduct creates a new product
@@ -110,184 +128,267 @@ func (r *Repository) CreateProduct(product Product) (*Product, error) {
 	r.logger.WithFields(logrus.Fields{
 		"operation": "CreateProduct",
 		"action":    "INSERT",
-		"product_name": product.Name,
-		"product_id": product.ID,
-	}).Info("Database operation started")
-	
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	
-	// Check if product with same name already exists
-	for _, existingProduct := range r.products {
-		if existingProduct.Name == product.Name {
-			duration := time.Since(start)
-			r.logger.WithFields(logrus.Fields{
-				"operation": "CreateProduct",
-				"action":    "INSERT",
-				"product_name": product.Name,
-				"duration_ms": duration.Milliseconds(),
-				"error": "product with this name already exists",
-			}).Warn("Database operation failed")
-			return nil, errors.New("product with this name already exists")
-		}
-	}
-	
-	// Create new product
-	newProduct := &Product{
-		ID:          product.ID,
-		Name:        product.Name,
-		Description: product.Description,
-		Price:       product.Price,
-		Stock:       product.Stock,
-		Category:    product.Category,
-		CreatedAt:   product.CreatedAt,
-		UpdatedAt:   product.UpdatedAt,
-	}
-	
-	r.products[product.ID] = newProduct
-	
-	// Return a copy
-	productCopy := *newProduct
+		"name":      product.Name,
+		"category":  product.Category,
+	}).Debug("Database operation started")
+
+	// Set timestamps
+	now := time.Now()
+	product.CreatedAt = now
+	product.UpdatedAt = now
+
+	result := r.db.Create(&product)
 	
 	duration := time.Since(start)
+	
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "CreateProduct",
+			"action":    "INSERT",
+			"name":      product.Name,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("CreateProduct", "INSERT", false, duration)
+		return nil, result.Error
+	}
+
+	// Record successful database operation
+	RecordDatabaseOperation("CreateProduct", "INSERT", true, duration)
+	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "CreateProduct",
 		"action":    "INSERT",
-		"product_name": product.Name,
 		"product_id": product.ID,
+		"name":      product.Name,
 		"duration_ms": duration.Milliseconds(),
-		"created": true,
 	}).Info("Database operation completed")
-	
-	return &productCopy, nil
+
+	return &product, nil
 }
 
 // UpdateProduct updates an existing product
 func (r *Repository) UpdateProduct(product Product) (*Product, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "UpdateProduct",
+		"action":    "UPDATE",
+		"product_id": product.ID,
+		"name":      product.Name,
+	}).Debug("Database operation started")
+
+	// Set updated timestamp
+	product.UpdatedAt = time.Now()
+
+	result := r.db.Save(&product)
 	
-	existingProduct, exists := r.products[product.ID]
-	if !exists {
-		return nil, errors.New("product not found")
+	duration := time.Since(start)
+	
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "UpdateProduct",
+			"action":    "UPDATE",
+			"product_id": product.ID,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("UpdateProduct", "UPDATE", false, duration)
+		return nil, result.Error
 	}
+
+	// Record successful database operation
+	RecordDatabaseOperation("UpdateProduct", "UPDATE", true, duration)
 	
-	// Check if another product with same name exists (excluding current product)
-	for id, existingProduct := range r.products {
-		if id != product.ID && existingProduct.Name == product.Name {
-			return nil, errors.New("product with this name already exists")
-		}
-	}
-	
-	// Update product
-	existingProduct.Name = product.Name
-	existingProduct.Description = product.Description
-	existingProduct.Price = product.Price
-	existingProduct.Stock = product.Stock
-	existingProduct.Category = product.Category
-	existingProduct.UpdatedAt = product.UpdatedAt
-	
-	// Return a copy
-	productCopy := *existingProduct
-	return &productCopy, nil
+	r.logger.WithFields(logrus.Fields{
+		"operation": "UpdateProduct",
+		"action":    "UPDATE",
+		"product_id": product.ID,
+		"duration_ms": duration.Milliseconds(),
+	}).Info("Database operation completed")
+
+	return &product, nil
 }
 
-// DeleteProduct deletes a product
+// DeleteProduct deletes a product by ID
 func (r *Repository) DeleteProduct(id int) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "DeleteProduct",
+		"action":    "DELETE",
+		"product_id": id,
+	}).Debug("Database operation started")
+
+	result := r.db.Delete(&Product{}, id)
 	
-	_, exists := r.products[id]
-	if !exists {
+	duration := time.Since(start)
+	
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "DeleteProduct",
+			"action":    "DELETE",
+			"product_id": id,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("DeleteProduct", "DELETE", false, duration)
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "DeleteProduct",
+			"action":    "DELETE",
+			"product_id": id,
+			"duration_ms": duration.Milliseconds(),
+		}).Warn("Product not found for deletion")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("DeleteProduct", "DELETE", false, duration)
 		return errors.New("product not found")
 	}
-	
-	delete(r.products, id)
-	return nil
-}
 
-// GetNextID returns the next available ID
-func (r *Repository) GetNextID() int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	// Record successful database operation
+	RecordDatabaseOperation("DeleteProduct", "DELETE", true, duration)
 	
-	id := r.nextID
-	r.nextID++
-	return id
+	r.logger.WithFields(logrus.Fields{
+		"operation": "DeleteProduct",
+		"action":    "DELETE",
+		"product_id": id,
+		"duration_ms": duration.Milliseconds(),
+		"rows_affected": result.RowsAffected,
+	}).Info("Database operation completed")
+
+	return nil
 }
 
 // GetTopMostExpensive returns the most expensive products
 func (r *Repository) GetTopMostExpensive(limit int) ([]Product, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetTopMostExpensive",
+		"action":    "SELECT",
+		"limit":     limit,
+	}).Debug("Database operation started")
+
+	var products []Product
+	result := r.db.Order("price DESC").Limit(limit).Find(&products)
 	
-	// Convert map to slice
-	products := make([]Product, 0, len(r.products))
-	for _, product := range r.products {
-		products = append(products, *product)
+	duration := time.Since(start)
+	
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetTopMostExpensive",
+			"action":    "SELECT",
+			"limit":     limit,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("GetTopMostExpensive", "SELECT", false, duration)
+		return nil, result.Error
 	}
+
+	// Record successful database operation
+	RecordDatabaseOperation("GetTopMostExpensive", "SELECT", true, duration)
 	
-	// Sort by price in descending order
-	for i := 0; i < len(products); i++ {
-		for j := i + 1; j < len(products); j++ {
-			if products[i].Price < products[j].Price {
-				products[i], products[j] = products[j], products[i]
-			}
-		}
-	}
-	
-	// Return only the requested number of products
-	if limit > len(products) {
-		limit = len(products)
-	}
-	
-	return products[:limit], nil
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetTopMostExpensive",
+		"action":    "SELECT",
+		"limit":     limit,
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+
+	return products, nil
 }
 
 // GetLowStockProducts returns products with low stock
 func (r *Repository) GetLowStockProducts(maxStock int) ([]Product, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetLowStockProducts",
+		"action":    "SELECT",
+		"max_stock": maxStock,
+	}).Debug("Database operation started")
+
+	var products []Product
+	result := r.db.Where("stock <= ?", maxStock).Find(&products)
 	
-	var lowStockProducts []Product
+	duration := time.Since(start)
 	
-	for _, product := range r.products {
-		if maxStock == 1 {
-			// For stock = 1
-			if product.Stock == 1 {
-				lowStockProducts = append(lowStockProducts, *product)
-			}
-		} else {
-			// For stock < maxStock
-			if product.Stock < maxStock {
-				lowStockProducts = append(lowStockProducts, *product)
-			}
-		}
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetLowStockProducts",
+			"action":    "SELECT",
+			"max_stock": maxStock,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("GetLowStockProducts", "SELECT", false, duration)
+		return nil, result.Error
 	}
+
+	// Record successful database operation
+	RecordDatabaseOperation("GetLowStockProducts", "SELECT", true, duration)
 	
-	return lowStockProducts, nil
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetLowStockProducts",
+		"action":    "SELECT",
+		"max_stock": maxStock,
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+
+	return products, nil
 }
 
 // GetProductsByCategory returns products by category
 func (r *Repository) GetProductsByCategory(category string) ([]Product, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	
-	var categoryProducts []Product
-	
-	for _, product := range r.products {
-		if product.Category == category {
-			categoryProducts = append(categoryProducts, *product)
-		}
-	}
-	
-	return categoryProducts, nil
-}
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByCategory",
+		"action":    "SELECT",
+		"category":  category,
+	}).Debug("Database operation started")
 
-// GetProductCount returns the total number of products
-func (r *Repository) GetProductCount() int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	var products []Product
+	result := r.db.Where("category = ?", category).Find(&products)
 	
-	return len(r.products)
+	duration := time.Since(start)
+	
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetProductsByCategory",
+			"action":    "SELECT",
+			"category":  category,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+		
+		// Record failed database operation
+		RecordDatabaseOperation("GetProductsByCategory", "SELECT", false, duration)
+		return nil, result.Error
+	}
+
+	// Record successful database operation
+	RecordDatabaseOperation("GetProductsByCategory", "SELECT", true, duration)
+	
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByCategory",
+		"action":    "SELECT",
+		"category":  category,
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+
+	return products, nil
 }
