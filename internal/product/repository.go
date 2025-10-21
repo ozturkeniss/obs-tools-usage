@@ -48,7 +48,7 @@ func (r *Repository) GetAllProducts() ([]Product, error) {
 	UpdateBusinessMetrics(products)
 	
 	// Log slow queries
-	LogSlowQueries(r.logger, "GetAllProducts", duration, 100*time.Millisecond)
+	LogSlowQueries(r.logger.WithField("source", "repository"), "GetAllProducts", duration, 100*time.Millisecond)
 	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "GetAllProducts",
@@ -91,7 +91,7 @@ func (r *Repository) GetProductByID(id int) (*Product, error) {
 	duration := time.Since(start)
 	
 	// Log slow queries
-	LogSlowQueries(r.logger, "GetProductByID", duration, 50*time.Millisecond)
+	LogSlowQueries(r.logger.WithField("source", "repository"), "GetProductByID", duration, 50*time.Millisecond)
 	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "GetProductByID",
