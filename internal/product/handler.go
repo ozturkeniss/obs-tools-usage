@@ -168,6 +168,9 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 		return
 	}
 	
+	// Record Prometheus metrics
+	RecordProductDeleted()
+	
 	// Log business event
 	logger := GetLoggerFromContext(c)
 	userID := c.GetHeader("X-User-ID")
