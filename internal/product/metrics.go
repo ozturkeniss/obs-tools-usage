@@ -56,6 +56,49 @@ var (
 		},
 	)
 
+	productsByCategory = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "products_by_category_total",
+			Help: "Total number of products by category",
+		},
+		[]string{"category"},
+	)
+
+	productsLowStock = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "products_low_stock_total",
+			Help: "Total number of products with low stock",
+		},
+	)
+
+	productsOutOfStock = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "products_out_of_stock_total",
+			Help: "Total number of products out of stock",
+		},
+	)
+
+	productsHighValue = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "products_high_value_total",
+			Help: "Total number of high-value products (>1000)",
+		},
+	)
+
+	averageProductPrice = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "average_product_price",
+			Help: "Average product price",
+		},
+	)
+
+	totalInventoryValue = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "total_inventory_value",
+			Help: "Total inventory value (price * stock)",
+		},
+	)
+
 	productsCreatedTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "products_created_total",
@@ -75,6 +118,26 @@ var (
 			Name: "products_deleted_total",
 			Help: "Total number of products deleted",
 		},
+	)
+
+	// Stock level metrics
+	stockLevels = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "product_stock_levels",
+			Help:    "Distribution of product stock levels",
+			Buckets: []float64{0, 1, 5, 10, 25, 50, 100, 250, 500, 1000},
+		},
+		[]string{"category"},
+	)
+
+	// Price range metrics
+	priceRanges = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "product_price_ranges",
+			Help:    "Distribution of product prices",
+			Buckets: []float64{0, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000},
+		},
+		[]string{"category"},
 	)
 
 	// System metrics
@@ -249,6 +312,90 @@ func UpdateProductsTotal() {
 	// This would typically query the database for actual count
 	// For now, we'll use a simple counter approach
 	// In a real implementation, you'd query the repository
+}
+
+// UpdateBusinessMetrics updates all business metrics
+func UpdateBusinessMetrics(products []Product) {
+	// Reset category counters
+	productsByCategory.Reset()
+	
+	// Counters
+	totalCount := len(products)
+	lowStockCount := 0
+	outOfStockCount := 0
+	highValueCount := 0
+	totalPrice := 0.0
+	totalInventoryValue := 0.0
+	
+	// Category counters
+	categoryCounts := make(map[string]int)
+	
+	for _, product := range products {
+		// Count by category
+		categoryCounts[product.Category]++
+		
+		// Stock level checks
+		if product.Stock == 0 {
+			outOfStockCount++
+		} else if product.Stock < 10 {
+			lowStockCount++
+		}
+		
+		// High value products
+		if product.Price > 1000 {
+			highValueCount++
+		}
+		
+		// Price calculations
+		totalPrice += product.Price
+		totalInventoryValue += product.Price * float64(product.Stock)
+		
+		// Record stock level distribution
+		stockLevels.WithLabelValues(product.Category).Observe(float64(product.Stock))
+		
+		// Record price distribution
+		priceRanges.WithLabelValues(product.Category).Observe(product.Price)
+	}
+	
+	// Update gauges
+	productsTotal.Set(float64(totalCount))
+	productsLowStock.Set(float64(lowStockCount))
+	productsOutOfStock.Set(float64(outOfStockCount))
+	productsHighValue.Set(float64(highValueCount))
+	
+	// Calculate and set average price
+	if totalCount > 0 {
+		averageProductPrice.Set(totalPrice / float64(totalCount))
+	} else {
+		averageProductPrice.Set(0)
+	}
+	
+	// Set total inventory value
+	totalInventoryValue.Set(totalInventoryValue)
+	
+	// Update category counters
+	for category, count := range categoryCounts {
+		productsByCategory.WithLabelValues(category).Set(float64(count))
+	}
+}
+
+// RecordProductStockLevel records individual product stock level
+func RecordProductStockLevel(product Product) {
+	stockLevels.WithLabelValues(product.Category).Observe(float64(product.Stock))
+	priceRanges.WithLabelValues(product.Category).Observe(product.Price)
+}
+
+// RecordLowStockAlert records low stock alert
+func RecordLowStockAlert(product Product) {
+	// This could be used for alerting when stock is low
+	// For now, we just record the metric
+	productsLowStock.Inc()
+}
+
+// RecordOutOfStockAlert records out of stock alert
+func RecordOutOfStockAlert(product Product) {
+	// This could be used for alerting when product is out of stock
+	productsOutOfStock.Inc()
 }
 
 // UpdateSystemMetrics updates system-level metrics
