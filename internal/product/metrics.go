@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/sirupsen/logrus"
@@ -292,7 +293,7 @@ func GetSystemMetrics() (uint64, uint64, int, uint32, uint32) {
 func PerformanceMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get initial metrics
-		startMemAlloc, startMemSys, startGoroutines, startNumGC, startGCForced := GetSystemMetrics()
+		_, _, _, startNumGC, startGCForced := GetSystemMetrics()
 		startTime := time.Now()
 		
 		// Process request
@@ -398,7 +399,7 @@ func UpdateBusinessMetrics(products []Product) {
 	outOfStockCount := 0
 	highValueCount := 0
 	totalPrice := 0.0
-	totalInventoryValue := 0.0
+	totalInventoryValueCalc := 0.0
 	
 	// Category counters
 	categoryCounts := make(map[string]int)
@@ -421,7 +422,7 @@ func UpdateBusinessMetrics(products []Product) {
 		
 		// Price calculations
 		totalPrice += product.Price
-		totalInventoryValue += product.Price * float64(product.Stock)
+		totalInventoryValueCalc += product.Price * float64(product.Stock)
 		
 		// Record stock level distribution
 		stockLevels.WithLabelValues(product.Category).Observe(float64(product.Stock))
@@ -444,7 +445,7 @@ func UpdateBusinessMetrics(products []Product) {
 	}
 	
 	// Set total inventory value
-	totalInventoryValue.Set(totalInventoryValue)
+	totalInventoryValue.Set(totalInventoryValueCalc)
 	
 	// Update category counters
 	for category, count := range categoryCounts {
@@ -495,9 +496,9 @@ func UpdateSystemMetrics() {
 	// Goroutine and thread metrics
 	goroutinesTotal.Set(float64(runtime.NumGoroutine()))
 	
-	// CGO calls
-	cgoCalls.Add(float64(memStats.CGOCall - lastCGOCalls))
-	lastCGOCalls = memStats.CGOCall
+	// CGO calls (not available in runtime.MemStats)
+	// cgoCalls.Add(float64(memStats.CGOCall - lastCGOCalls))
+	// lastCGOCalls = memStats.CGOCall
 	
 	// Approximate CPU usage (this is a simple approximation)
 	updateCPUUsage()
