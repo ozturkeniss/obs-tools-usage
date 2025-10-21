@@ -11,6 +11,9 @@ type Config struct {
 	Environment string
 	LogLevel    string
 	LogFormat   string
+	LogOutput   string
+	LogDir      string
+	LogFile     string
 	Database    DatabaseConfig
 }
 
@@ -33,6 +36,9 @@ func LoadConfig() *Config {
 		Environment: environment,
 		LogLevel:    getLogLevelFromEnv(environment),
 		LogFormat:   getLogFormatFromEnv(environment),
+		LogOutput:   getLogOutputFromEnv(environment),
+		LogDir:      getEnv("LOG_DIR", "./logs"),
+		LogFile:     getEnv("LOG_FILE", "product-service.log"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),
@@ -111,5 +117,25 @@ func getLogFormatFromEnv(environment string) string {
 		return "text"
 	default:
 		return "text"
+	}
+}
+
+// getLogOutputFromEnv determines log output from environment
+func getLogOutputFromEnv(environment string) string {
+	// First check LOG_OUTPUT environment variable
+	if logOutput := os.Getenv("LOG_OUTPUT"); logOutput != "" {
+		return logOutput
+	}
+	
+	// Default outputs based on environment
+	switch environment {
+	case "production":
+		return "file"
+	case "staging":
+		return "both"
+	case "development", "dev":
+		return "console"
+	default:
+		return "console"
 	}
 }

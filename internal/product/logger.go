@@ -1,7 +1,9 @@
 package product
 
 import (
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -42,8 +44,9 @@ func init() {
 		})
 	}
 	
-	// Set output to stdout
-	Logger.SetOutput(os.Stdout)
+	// Set output based on environment and configuration
+	output := getLogOutput(environment)
+	Logger.SetOutput(output)
 	
 	// Log configuration
 	Logger.WithFields(logrus.Fields{
@@ -93,6 +96,64 @@ func getFormatterName(environment string) string {
 		return "json"
 	}
 	return "text"
+}
+
+// getLogOutput determines where to write logs based on environment and configuration
+func getLogOutput(environment string) io.Writer {
+	// Check LOG_OUTPUT environment variable
+	logOutput := strings.ToLower(os.Getenv("LOG_OUTPUT"))
+	
+	switch logOutput {
+	case "file":
+		return getFileOutput()
+	case "both", "file+console":
+		return io.MultiWriter(os.Stdout, getFileOutput())
+	case "console", "stdout":
+		return os.Stdout
+	default:
+		// Default behavior based on environment
+		switch environment {
+		case "production":
+			return getFileOutput()
+		case "staging", "development", "dev":
+			return os.Stdout
+		default:
+			return os.Stdout
+		}
+	}
+}
+
+// getFileOutput creates a file output for logging
+func getFileOutput() io.Writer {
+	// Get log directory from environment or use default
+	logDir := os.Getenv("LOG_DIR")
+	if logDir == "" {
+		logDir = "./logs"
+	}
+	
+	// Create log directory if it doesn't exist
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		// If we can't create the directory, fall back to stdout
+		return os.Stdout
+	}
+	
+	// Get log filename from environment or use default
+	logFile := os.Getenv("LOG_FILE")
+	if logFile == "" {
+		logFile = "product-service.log"
+	}
+	
+	// Create full path
+	logPath := filepath.Join(logDir, logFile)
+	
+	// Open log file for writing (append mode)
+	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		// If we can't open the file, fall back to stdout
+		return os.Stdout
+	}
+	
+	return file
 }
 
 // GetLogger returns the configured logger instance
