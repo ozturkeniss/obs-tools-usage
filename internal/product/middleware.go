@@ -80,6 +80,10 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 		// Get logger with request ID
 		logger := GetLoggerFromContext(c)
 		
+		// Track active connections
+		httpConnections.Inc()
+		defer httpConnections.Dec()
+		
 		// Prepare request fields
 		requestFields := map[string]interface{}{
 			"method":     c.Request.Method,
@@ -104,11 +108,18 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 		// Calculate duration
 		duration := time.Since(start)
 		
+		// Calculate request/response sizes
+		requestSize := int(c.Request.ContentLength)
+		if requestSize < 0 {
+			requestSize = 0
+		}
+		responseSize := c.Writer.Size()
+		
 		// Prepare response fields
 		responseFields := map[string]interface{}{
 			"status_code":    c.Writer.Status(),
 			"duration_ms":    duration.Milliseconds(),
-			"response_size":  c.Writer.Size(),
+			"response_size":  responseSize,
 		}
 		
 		// Record Prometheus metrics
