@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package product;
+
+option go_package = "obs-tools-usage/api/proto/product";
+
+service ProductService {
+  rpc GetProduct(GetProductRequest) returns (ProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (ProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (ProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetTopMostExpensiveProducts(GetTopMostExpensiveProductsRequest) returns (ListProductsResponse);
+  rpc GetLowStockProducts(GetLowStockProductsRequest) returns (ListProductsResponse);
+  rpc GetProductsByCategory(GetProductsByCategoryRequest) returns (ListProductsResponse);
+}
+
+message Product {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  int32 stock = 5;
+  string category = 6;
+  string created_at = 7; // Using string for simplicity, can be google.protobuf.Timestamp
+  string updated_at = 8; // Using string for simplicity, can be google.protobuf.Timestamp
+}
+
+message GetProductRequest {
+  int32 id = 1;
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  int32 stock = 4;
+  string category = 5;
+}
+
+message UpdateProductRequest {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  int32 stock = 5;
+  string category = 6;
+}
+
+message DeleteProductRequest {
+  int32 id = 1;
+}
+
+message DeleteProductResponse {
+  string message = 1;
+}
+
+message ListProductsRequest {
+  // No fields for now, can add pagination/filters later
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+}
+
+message GetTopMostExpensiveProductsRequest {
+  int32 limit = 1;
+}
+
+message GetLowStockProductsRequest {
+  int32 max_stock = 1;
+}
+
+message GetProductsByCategoryRequest {
+  string category = 1;
+}
+
+message ProductResponse {
+  Product product = 1;
+}
