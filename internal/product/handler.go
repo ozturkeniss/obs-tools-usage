@@ -97,6 +97,7 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 	
 	// Record Prometheus metrics
 	RecordProductCreated()
+	RecordProductStockLevel(*createdProduct)
 	
 	// Log business event
 	logger := GetLoggerFromContext(c)
@@ -137,6 +138,7 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 	
 	// Record Prometheus metrics
 	RecordProductUpdated()
+	RecordProductStockLevel(*updatedProduct)
 	
 	// Log business event
 	logger := GetLoggerFromContext(c)
