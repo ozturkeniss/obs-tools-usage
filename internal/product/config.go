@@ -10,6 +10,7 @@ type Config struct {
 	Port        string
 	Environment string
 	LogLevel    string
+	LogFormat   string
 	Database    DatabaseConfig
 }
 
@@ -25,10 +26,13 @@ type DatabaseConfig struct {
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() *Config {
+	environment := getEnv("ENVIRONMENT", "development")
+	
 	return &Config{
 		Port:        getEnv("PORT", "8080"),
-		Environment: getEnv("ENVIRONMENT", "development"),
-		LogLevel:    getEnv("LOG_LEVEL", "info"),
+		Environment: environment,
+		LogLevel:    getLogLevelFromEnv(environment),
+		LogFormat:   getLogFormatFromEnv(environment),
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),
@@ -70,4 +74,42 @@ func getEnv(key, defaultValue string) string {
 // GetDatabaseURL returns the complete database connection URL
 func (c *Config) GetDatabaseURL() string {
 	return "postgres://" + c.Database.User + ":" + c.Database.Password + "@" + c.Database.Host + ":" + c.Database.Port + "/" + c.Database.DBName + "?sslmode=" + c.Database.SSLMode
+}
+
+// getLogLevelFromEnv determines log level from environment
+func getLogLevelFromEnv(environment string) string {
+	// First check LOG_LEVEL environment variable
+	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
+		return logLevel
+	}
+	
+	// Default log levels based on environment
+	switch environment {
+	case "production":
+		return "warn"
+	case "staging":
+		return "info"
+	case "development", "dev":
+		return "debug"
+	default:
+		return "info"
+	}
+}
+
+// getLogFormatFromEnv determines log format from environment
+func getLogFormatFromEnv(environment string) string {
+	// First check LOG_FORMAT environment variable
+	if logFormat := os.Getenv("LOG_FORMAT"); logFormat != "" {
+		return logFormat
+	}
+	
+	// Default formats based on environment
+	switch environment {
+	case "production":
+		return "json"
+	case "staging", "development", "dev":
+		return "text"
+	default:
+		return "text"
+	}
 }
