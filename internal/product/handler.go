@@ -255,7 +255,9 @@ func (h *Handler) GetProductsByCategory(c *gin.Context) {
 // HealthCheck returns service health status
 func (h *Handler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"status": "healthy",
-		"service": "product-service",
+		"status":    "healthy",
+		"timestamp": time.Now(),
+		"service":   "product-service",
+		"version":   "1.0.0",
 	})
 }
