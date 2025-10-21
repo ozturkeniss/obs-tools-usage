@@ -3,6 +3,7 @@ package product
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -44,7 +45,7 @@ func SetupRoutes(r *gin.Engine, service *Service) {
 func (h *Handler) GetAllProducts(c *gin.Context) {
 	products, err := h.service.GetAllProducts()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleInternalError(c, err)
 		return
 	}
 	
@@ -56,13 +57,13 @@ func (h *Handler) GetProductByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
+		HandleValidationError(c, err)
 		return
 	}
 	
 	product, err := h.service.GetProductByID(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		HandleNotFoundError(c, err)
 		return
 	}
 	
@@ -73,13 +74,17 @@ func (h *Handler) GetProductByID(c *gin.Context) {
 func (h *Handler) CreateProduct(c *gin.Context) {
 	var product Product
 	if err := c.ShouldBindJSON(&product); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleValidationError(c, err)
 		return
 	}
 	
 	createdProduct, err := h.service.CreateProduct(product)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "already exists") {
+			HandleConflictError(c, err)
+		} else {
+			HandleInternalError(c, err)
+		}
 		return
 	}
 	
