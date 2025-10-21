@@ -1,10 +1,114 @@
 package product
 
 import (
+	"fmt"
 	"runtime"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/sirupsen/logrus"
+)
+
+// Prometheus metrics
+var (
+	// HTTP metrics
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"method", "endpoint", "status_code"},
+	)
+
+	httpRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "endpoint"},
+	)
+
+	httpRequestSize = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_size_bytes",
+			Help:    "HTTP request size in bytes",
+			Buckets: prometheus.ExponentialBuckets(100, 10, 8),
+		},
+		[]string{"method", "endpoint"},
+	)
+
+	httpResponseSize = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_response_size_bytes",
+			Help:    "HTTP response size in bytes",
+			Buckets: prometheus.ExponentialBuckets(100, 10, 8),
+		},
+		[]string{"method", "endpoint"},
+	)
+
+	// Business metrics
+	productsTotal = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "products_total",
+			Help: "Total number of products",
+		},
+	)
+
+	productsCreatedTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "products_created_total",
+			Help: "Total number of products created",
+		},
+	)
+
+	productsUpdatedTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "products_updated_total",
+			Help: "Total number of products updated",
+		},
+	)
+
+	productsDeletedTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "products_deleted_total",
+			Help: "Total number of products deleted",
+		},
+	)
+
+	// System metrics
+	memoryAllocBytes = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "memory_alloc_bytes",
+			Help: "Current memory allocation in bytes",
+		},
+	)
+
+	goroutinesTotal = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "goroutines_total",
+			Help: "Current number of goroutines",
+		},
+	)
+
+	// Database metrics
+	databaseOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "database_operations_total",
+			Help: "Total number of database operations",
+		},
+		[]string{"operation", "status"},
+	)
+
+	databaseOperationDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "database_operation_duration_seconds",
+			Help:    "Database operation duration in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"operation"},
+	)
 )
 
 // PerformanceMetrics holds performance-related metrics
@@ -102,4 +206,61 @@ func LogSlowQueries(logger *logrus.Entry, operation string, duration time.Durati
 			"threshold_ms": threshold.Milliseconds(),
 		}).Warn("Slow query detected")
 	}
+}
+
+// Prometheus metrics functions
+
+// RecordHTTPRequest records HTTP request metrics
+func RecordHTTPRequest(method, endpoint string, statusCode int, duration time.Duration, requestSize, responseSize int) {
+	statusCodeStr := fmt.Sprintf("%d", statusCode)
+	
+	httpRequestsTotal.WithLabelValues(method, endpoint, statusCodeStr).Inc()
+	httpRequestDuration.WithLabelValues(method, endpoint).Observe(duration.Seconds())
+	httpRequestSize.WithLabelValues(method, endpoint).Observe(float64(requestSize))
+	httpResponseSize.WithLabelValues(method, endpoint).Observe(float64(responseSize))
+}
+
+// RecordDatabaseOperation records database operation metrics
+func RecordDatabaseOperation(operation, status string, duration time.Duration) {
+	databaseOperationsTotal.WithLabelValues(operation, status).Inc()
+	databaseOperationDuration.WithLabelValues(operation).Observe(duration.Seconds())
+}
+
+// RecordProductCreated records product creation metric
+func RecordProductCreated() {
+	productsCreatedTotal.Inc()
+	UpdateProductsTotal()
+}
+
+// RecordProductUpdated records product update metric
+func RecordProductUpdated() {
+	productsUpdatedTotal.Inc()
+	UpdateProductsTotal()
+}
+
+// RecordProductDeleted records product deletion metric
+func RecordProductDeleted() {
+	productsDeletedTotal.Inc()
+	UpdateProductsTotal()
+}
+
+// UpdateProductsTotal updates the total products count
+func UpdateProductsTotal() {
+	// This would typically query the database for actual count
+	// For now, we'll use a simple counter approach
+	// In a real implementation, you'd query the repository
+}
+
+// UpdateSystemMetrics updates system-level metrics
+func UpdateSystemMetrics() {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	
+	memoryAllocBytes.Set(float64(memStats.Alloc))
+	goroutinesTotal.Set(float64(runtime.NumGoroutine()))
+}
+
+// GetPrometheusMetrics returns the Prometheus registry
+func GetPrometheusMetrics() *prometheus.Registry {
+	return prometheus.DefaultRegisterer.(*prometheus.Registry)
 }
