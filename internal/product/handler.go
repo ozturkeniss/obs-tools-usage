@@ -67,6 +67,13 @@ func (h *Handler) GetProductByID(c *gin.Context) {
 		return
 	}
 	
+	// Log high value product access
+	if product.Price >= 1000.0 {
+		logger := GetLoggerFromContext(c)
+		userID := c.GetHeader("X-User-ID")
+		LogHighValueProduct(logger, *product, userID)
+	}
+	
 	c.JSON(http.StatusOK, product)
 }
 
@@ -88,6 +95,11 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 		return
 	}
 	
+	// Log business event
+	logger := GetLoggerFromContext(c)
+	userID := c.GetHeader("X-User-ID") // Assuming user ID comes from header
+	LogProductCreated(logger, *createdProduct, userID)
+	
 	c.JSON(http.StatusCreated, createdProduct)
 }
 
@@ -96,22 +108,34 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
+		HandleValidationError(c, err)
 		return
 	}
 	
 	var product Product
 	if err := c.ShouldBindJSON(&product); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleValidationError(c, err)
+		return
+	}
+	
+	// Get old product for comparison
+	oldProduct, err := h.service.GetProductByID(id)
+	if err != nil {
+		HandleNotFoundError(c, err)
 		return
 	}
 	
 	product.ID = id
 	updatedProduct, err := h.service.UpdateProduct(product)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleInternalError(c, err)
 		return
 	}
+	
+	// Log business event
+	logger := GetLoggerFromContext(c)
+	userID := c.GetHeader("X-User-ID")
+	LogProductUpdated(logger, *oldProduct, *updatedProduct, userID)
 	
 	c.JSON(http.StatusOK, updatedProduct)
 }
@@ -121,15 +145,27 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
+		HandleValidationError(c, err)
+		return
+	}
+	
+	// Get product before deletion for logging
+	product, err := h.service.GetProductByID(id)
+	if err != nil {
+		HandleNotFoundError(c, err)
 		return
 	}
 	
 	err = h.service.DeleteProduct(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleInternalError(c, err)
 		return
 	}
+	
+	// Log business event
+	logger := GetLoggerFromContext(c)
+	userID := c.GetHeader("X-User-ID")
+	LogProductDeleted(logger, *product, userID)
 	
 	c.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
 }
