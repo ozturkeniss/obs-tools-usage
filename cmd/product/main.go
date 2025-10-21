@@ -32,6 +32,7 @@ func main() {
 	r.Use(product.CorrelationIDMiddleware())
 	r.Use(product.RequestIDMiddleware())
 	r.Use(product.HTTPLoggingMiddleware())
+	r.Use(product.PerformanceMiddleware())
 
 	// Initialize product service
 	productService := product.NewService()
