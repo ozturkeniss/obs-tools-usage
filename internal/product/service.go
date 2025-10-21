@@ -61,7 +61,7 @@ func (s *Service) UpdateProduct(product Product) (*Product, error) {
 	}
 	
 	// Check if product exists
-	existingProduct, err := s.repository.GetProductByID(product.ID)
+	_, err := s.repository.GetProductByID(product.ID)
 	if err != nil {
 		return nil, fmt.Errorf("product not found: %w", err)
 	}
