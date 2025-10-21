@@ -35,11 +35,28 @@ func main() {
 	r.Use(product.HTTPLoggingMiddleware())
 	r.Use(product.PerformanceMiddleware())
 
-	// Initialize product service
-	productService := product.NewService()
+	// Initialize database
+	db, err := product.NewDatabase(&config.Database)
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
+	defer db.Close()
 
-	// Initialize repository
-	productRepo := product.NewRepository()
+	// Run migrations
+	if err := db.Migrate(); err != nil {
+		log.Fatal("Failed to run migrations:", err)
+	}
+
+	// Seed initial data
+	if err := db.SeedData(); err != nil {
+		log.Fatal("Failed to seed data:", err)
+	}
+
+	// Initialize repository with database
+	productRepo := product.NewRepository(db.DB)
+
+	// Initialize product service
+	productService := product.NewService(productRepo)
 
 	// Initialize gRPC server
 	grpcServer := product.NewGRPCServer(productService, productRepo, product.GetLogger())
