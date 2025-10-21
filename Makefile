@@ -3,7 +3,7 @@
 # Variables
 PROTO_DIR = api/proto
 PROTO_FILES = $(shell find $(PROTO_DIR) -name "*.proto")
-GO_OUT_DIR = api/proto
+GO_OUT_DIR = .
 
 # Go modules
 .PHONY: mod-tidy
