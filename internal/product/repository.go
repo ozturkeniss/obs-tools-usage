@@ -3,23 +3,34 @@ package product
 import (
 	"errors"
 	"sync"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Repository struct {
 	products map[int]*Product
 	nextID   int
 	mu       sync.RWMutex
+	logger   *logrus.Logger
 }
 
 func NewRepository() *Repository {
 	return &Repository{
 		products: make(map[int]*Product),
 		nextID:   1,
+		logger:   Logger,
 	}
 }
 
 // GetAllProducts returns all products
 func (r *Repository) GetAllProducts() ([]Product, error) {
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetAllProducts",
+		"action":    "SELECT",
+	}).Info("Database operation started")
+	
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	
@@ -28,32 +39,81 @@ func (r *Repository) GetAllProducts() ([]Product, error) {
 		products = append(products, *product)
 	}
 	
+	duration := time.Since(start)
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetAllProducts",
+		"action":    "SELECT",
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+	
 	return products, nil
 }
 
 // GetProductByID returns a product by ID
 func (r *Repository) GetProductByID(id int) (*Product, error) {
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductByID",
+		"action":    "SELECT",
+		"product_id": id,
+	}).Info("Database operation started")
+	
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	
 	product, exists := r.products[id]
 	if !exists {
+		duration := time.Since(start)
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetProductByID",
+			"action":    "SELECT",
+			"product_id": id,
+			"duration_ms": duration.Milliseconds(),
+			"error": "product not found",
+		}).Warn("Database operation failed")
 		return nil, errors.New("product not found")
 	}
 	
 	// Return a copy to avoid external modifications
 	productCopy := *product
+	
+	duration := time.Since(start)
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductByID",
+		"action":    "SELECT",
+		"product_id": id,
+		"duration_ms": duration.Milliseconds(),
+		"found": true,
+	}).Info("Database operation completed")
+	
 	return &productCopy, nil
 }
 
 // CreateProduct creates a new product
 func (r *Repository) CreateProduct(product Product) (*Product, error) {
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "CreateProduct",
+		"action":    "INSERT",
+		"product_name": product.Name,
+		"product_id": product.ID,
+	}).Info("Database operation started")
+	
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	
 	// Check if product with same name already exists
 	for _, existingProduct := range r.products {
 		if existingProduct.Name == product.Name {
+			duration := time.Since(start)
+			r.logger.WithFields(logrus.Fields{
+				"operation": "CreateProduct",
+				"action":    "INSERT",
+				"product_name": product.Name,
+				"duration_ms": duration.Milliseconds(),
+				"error": "product with this name already exists",
+			}).Warn("Database operation failed")
 			return nil, errors.New("product with this name already exists")
 		}
 	}
@@ -74,6 +134,17 @@ func (r *Repository) CreateProduct(product Product) (*Product, error) {
 	
 	// Return a copy
 	productCopy := *newProduct
+	
+	duration := time.Since(start)
+	r.logger.WithFields(logrus.Fields{
+		"operation": "CreateProduct",
+		"action":    "INSERT",
+		"product_name": product.Name,
+		"product_id": product.ID,
+		"duration_ms": duration.Milliseconds(),
+		"created": true,
+	}).Info("Database operation completed")
+	
 	return &productCopy, nil
 }
 
