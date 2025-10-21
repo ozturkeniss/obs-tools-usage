@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"obs-tools-usage/internal/product"
 )
 
@@ -40,6 +41,9 @@ func main() {
 
 	// Setup routes
 	product.SetupRoutes(r, productService)
+	
+	// Add Prometheus metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Create HTTP server
 	srv := &http.Server{
