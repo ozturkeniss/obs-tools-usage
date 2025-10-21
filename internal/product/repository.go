@@ -107,7 +107,7 @@ func (r *Repository) GetProductByID(id int) (*Product, error) {
 	}
 
 	// Record successful database operation
-	RecordDatabaseOperation("GetProductByID", "SELECT", true, duration)
+	RecordDatabaseOperation("GetProductByID", "SELECT", duration)
 	
 	// Log slow queries
 	LogSlowQueries(r.logger.WithField("source", "repository"), "GetProductByID", duration, 50*time.Millisecond)
@@ -151,12 +151,12 @@ func (r *Repository) CreateProduct(product Product) (*Product, error) {
 		}).Error("Database operation failed")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("CreateProduct", "INSERT", false, duration)
+		RecordDatabaseOperation("CreateProduct", "INSERT", duration)
 		return nil, result.Error
 	}
 
 	// Record successful database operation
-	RecordDatabaseOperation("CreateProduct", "INSERT", true, duration)
+	RecordDatabaseOperation("CreateProduct", "INSERT", duration)
 	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "CreateProduct",
@@ -196,12 +196,12 @@ func (r *Repository) UpdateProduct(product Product) (*Product, error) {
 		}).Error("Database operation failed")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("UpdateProduct", "UPDATE", false, duration)
+		RecordDatabaseOperation("UpdateProduct", "UPDATE", duration)
 		return nil, result.Error
 	}
 
 	// Record successful database operation
-	RecordDatabaseOperation("UpdateProduct", "UPDATE", true, duration)
+	RecordDatabaseOperation("UpdateProduct", "UPDATE", duration)
 	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "UpdateProduct",
@@ -236,7 +236,7 @@ func (r *Repository) DeleteProduct(id int) error {
 		}).Error("Database operation failed")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("DeleteProduct", "DELETE", false, duration)
+		RecordDatabaseOperation("DeleteProduct", "DELETE", duration)
 		return result.Error
 	}
 
@@ -249,12 +249,12 @@ func (r *Repository) DeleteProduct(id int) error {
 		}).Warn("Product not found for deletion")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("DeleteProduct", "DELETE", false, duration)
+		RecordDatabaseOperation("DeleteProduct", "DELETE", duration)
 		return errors.New("product not found")
 	}
 
 	// Record successful database operation
-	RecordDatabaseOperation("DeleteProduct", "DELETE", true, duration)
+	RecordDatabaseOperation("DeleteProduct", "DELETE", duration)
 	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "DeleteProduct",
@@ -291,12 +291,12 @@ func (r *Repository) GetTopMostExpensive(limit int) ([]Product, error) {
 		}).Error("Database operation failed")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("GetTopMostExpensive", "SELECT", false, duration)
+		RecordDatabaseOperation("GetTopMostExpensive", "SELECT", duration)
 		return nil, result.Error
 	}
 
 	// Record successful database operation
-	RecordDatabaseOperation("GetTopMostExpensive", "SELECT", true, duration)
+	RecordDatabaseOperation("GetTopMostExpensive", "SELECT", duration)
 	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "GetTopMostExpensive",
@@ -333,12 +333,12 @@ func (r *Repository) GetLowStockProducts(maxStock int) ([]Product, error) {
 		}).Error("Database operation failed")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("GetLowStockProducts", "SELECT", false, duration)
+		RecordDatabaseOperation("GetLowStockProducts", "SELECT", duration)
 		return nil, result.Error
 	}
 
 	// Record successful database operation
-	RecordDatabaseOperation("GetLowStockProducts", "SELECT", true, duration)
+	RecordDatabaseOperation("GetLowStockProducts", "SELECT", duration)
 	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "GetLowStockProducts",
@@ -375,12 +375,12 @@ func (r *Repository) GetProductsByCategory(category string) ([]Product, error) {
 		}).Error("Database operation failed")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("GetProductsByCategory", "SELECT", false, duration)
+		RecordDatabaseOperation("GetProductsByCategory", "SELECT", duration)
 		return nil, result.Error
 	}
 
 	// Record successful database operation
-	RecordDatabaseOperation("GetProductsByCategory", "SELECT", true, duration)
+	RecordDatabaseOperation("GetProductsByCategory", "SELECT", duration)
 	
 	r.logger.WithFields(logrus.Fields{
 		"operation": "GetProductsByCategory",
