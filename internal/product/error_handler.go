@@ -29,10 +29,13 @@ func LogError(logger *logrus.Entry, err error, context map[string]interface{}) {
 	}
 
 	// Add error details
-	context["error"] = err.Error()
+	context["error"] = MaskSensitiveData(err.Error())
 	context["error_type"] = getErrorType(err)
 
-	logger.WithFields(context).Error("Application error occurred")
+	// Mask sensitive data in context
+	maskedContext := MaskFields(context)
+
+	logger.WithFields(maskedContext).Error("Application error occurred")
 }
 
 // getErrorType determines the type of error
