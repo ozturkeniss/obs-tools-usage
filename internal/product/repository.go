@@ -42,12 +42,12 @@ func (r *Repository) GetAllProducts() ([]Product, error) {
 		}).Error("Database operation failed")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("GetAllProducts", "SELECT", false, duration)
+		RecordDatabaseOperation("GetAllProducts", "SELECT", duration)
 		return nil, result.Error
 	}
 
 	// Record successful database operation
-	RecordDatabaseOperation("GetAllProducts", "SELECT", true, duration)
+	RecordDatabaseOperation("GetAllProducts", "SELECT", duration)
 	
 	// Update business metrics
 	UpdateBusinessMetrics(products)
@@ -88,8 +88,8 @@ func (r *Repository) GetProductByID(id int) (*Product, error) {
 				"duration_ms": duration.Milliseconds(),
 			}).Warn("Product not found")
 			
-			// Record failed database operation
-			RecordDatabaseOperation("GetProductByID", "SELECT", false, duration)
+		// Record failed database operation
+		RecordDatabaseOperation("GetProductByID", "SELECT", duration)
 			return nil, errors.New("product not found")
 		}
 		
@@ -102,7 +102,7 @@ func (r *Repository) GetProductByID(id int) (*Product, error) {
 		}).Error("Database operation failed")
 		
 		// Record failed database operation
-		RecordDatabaseOperation("GetProductByID", "SELECT", false, duration)
+		RecordDatabaseOperation("GetProductByID", "SELECT", duration)
 		return nil, result.Error
 	}
 
