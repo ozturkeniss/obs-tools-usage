@@ -111,6 +111,16 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 			"response_size":  c.Writer.Size(),
 		}
 		
+		// Record Prometheus metrics
+		RecordHTTPRequest(
+			c.Request.Method,
+			c.Request.URL.Path,
+			c.Writer.Status(),
+			duration,
+			requestSize,
+			responseSize,
+		)
+		
 		// Log response
 		logger.WithFields(responseFields).Info("HTTP request completed")
 	}
