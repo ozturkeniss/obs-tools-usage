@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -36,6 +37,9 @@ func main() {
 
 	// Initialize product service
 	productService := product.NewService()
+
+	// Register health checkers
+	registerHealthCheckers()
 
 	// Setup routes
 	product.SetupRoutes(r, productService)
@@ -85,4 +89,85 @@ func corsMiddleware() gin.HandlerFunc {
 		
 		c.Next()
 	}
+}
+
+// registerHealthCheckers registers all health checkers
+func registerHealthCheckers() {
+	// Register memory health checker
+	product.RegisterHealthChecker("memory", &MemoryHealthChecker{})
+	
+	// Register goroutine health checker
+	product.RegisterHealthChecker("goroutines", &GoroutineHealthChecker{})
+	
+	// Register service health checker
+	product.RegisterHealthChecker("service", &ServiceHealthChecker{})
+}
+
+// MemoryHealthChecker checks memory usage
+type MemoryHealthChecker struct{}
+
+func (m *MemoryHealthChecker) Check(ctx context.Context) product.CheckResult {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	
+	// Check if memory usage is reasonable (less than 200MB)
+	if memStats.Alloc > 200*1024*1024 {
+		return product.CheckResult{
+			Status:  "unhealthy",
+			Message: "Memory usage too high",
+		}
+	}
+	
+	return product.CheckResult{
+		Status:  "healthy",
+		Message: "Memory usage normal",
+	}
+}
+
+func (m *MemoryHealthChecker) Name() string {
+	return "memory"
+}
+
+// GoroutineHealthChecker checks goroutine count
+type GoroutineHealthChecker struct{}
+
+func (g *GoroutineHealthChecker) Check(ctx context.Context) product.CheckResult {
+	goroutineCount := runtime.NumGoroutine()
+	
+	// Check if goroutine count is reasonable (less than 500)
+	if goroutineCount > 500 {
+		return product.CheckResult{
+			Status:  "unhealthy",
+			Message: "Too many goroutines",
+		}
+	}
+	
+	return product.CheckResult{
+		Status:  "healthy",
+		Message: "Goroutine count normal",
+	}
+}
+
+func (g *GoroutineHealthChecker) Name() string {
+	return "goroutines"
+}
+
+// ServiceHealthChecker checks basic service functionality
+type ServiceHealthChecker struct{}
+
+func (s *ServiceHealthChecker) Check(ctx context.Context) product.CheckResult {
+	// This is a simple check - in a real application you might check
+	// database connectivity, external service availability, etc.
+	
+	// Simulate a quick check
+	time.Sleep(10 * time.Millisecond)
+	
+	return product.CheckResult{
+		Status:  "healthy",
+		Message: "Service is functioning normally",
+	}
+}
+
+func (s *ServiceHealthChecker) Name() string {
+	return "service"
 }
