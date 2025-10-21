@@ -1,10 +1,8 @@
 package product
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -51,7 +49,7 @@ func GetLoggerFromContext(c *gin.Context) *logrus.Entry {
 			return logEntry
 		}
 	}
-	return Logger
+	return Logger.WithField("source", "middleware")
 }
 
 // GetRequestIDFromContext returns request ID from context
