@@ -41,6 +41,9 @@ func (r *Repository) GetAllProducts() ([]Product, error) {
 	
 	duration := time.Since(start)
 	
+	// Record Prometheus metrics
+	RecordDatabaseOperation("GetAllProducts", "success", duration)
+	
 	// Log slow queries
 	LogSlowQueries(r.logger, "GetAllProducts", duration, 100*time.Millisecond)
 	
