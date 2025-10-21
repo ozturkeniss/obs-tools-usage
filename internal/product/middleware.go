@@ -80,14 +80,20 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 		// Get logger with request ID
 		logger := GetLoggerFromContext(c)
 		
-		// Log incoming request
-		logger.WithFields(logrus.Fields{
+		// Prepare request fields
+		requestFields := map[string]interface{}{
 			"method":     c.Request.Method,
 			"path":       c.Request.URL.Path,
 			"query":      c.Request.URL.RawQuery,
 			"user_agent": c.Request.UserAgent(),
 			"ip":         c.ClientIP(),
-		}).Info("Incoming HTTP request")
+		}
+		
+		// Mask sensitive data in request fields
+		maskedRequestFields := MaskFields(requestFields)
+		
+		// Log incoming request
+		logger.WithFields(maskedRequestFields).Info("Incoming HTTP request")
 		
 		// Start timer
 		start := time.Now()
@@ -98,12 +104,15 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 		// Calculate duration
 		duration := time.Since(start)
 		
+		// Prepare response fields
+		responseFields := map[string]interface{}{
+			"status_code":    c.Writer.Status(),
+			"duration_ms":    duration.Milliseconds(),
+			"response_size":  c.Writer.Size(),
+		}
+		
 		// Log response
-		logger.WithFields(logrus.Fields{
-			"status_code": c.Writer.Status(),
-			"duration_ms": duration.Milliseconds(),
-			"response_size": c.Writer.Size(),
-		}).Info("HTTP request completed")
+		logger.WithFields(responseFields).Info("HTTP request completed")
 	}
 }
 
