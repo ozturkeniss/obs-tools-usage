@@ -44,6 +44,9 @@ func (r *Repository) GetAllProducts() ([]Product, error) {
 	// Record Prometheus metrics
 	RecordDatabaseOperation("GetAllProducts", "success", duration)
 	
+	// Update business metrics
+	UpdateBusinessMetrics(products)
+	
 	// Log slow queries
 	LogSlowQueries(r.logger, "GetAllProducts", duration, 100*time.Millisecond)
 	
