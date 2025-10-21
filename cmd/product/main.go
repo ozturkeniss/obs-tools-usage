@@ -51,6 +51,9 @@ func main() {
 		Handler: r,
 	}
 
+	// Start metrics updater
+	go updateMetricsPeriodically(productService)
+
 	// Start server in a goroutine
 	go func() {
 		log.Printf("Product service starting on port %d", config.GetPort())
@@ -89,6 +92,26 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 		
 		c.Next()
+	}
+}
+
+// updateMetricsPeriodically updates business metrics every 30 seconds
+func updateMetricsPeriodically(service *product.Service) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-ticker.C:
+			// Update system metrics
+			product.UpdateSystemMetrics()
+			
+			// Update business metrics by getting all products
+			products, err := service.GetAllProducts()
+			if err == nil {
+				product.UpdateBusinessMetrics(products)
+			}
+		}
 	}
 }
 
