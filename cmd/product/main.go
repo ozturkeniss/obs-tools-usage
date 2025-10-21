@@ -38,6 +38,11 @@ func main() {
 	// Initialize product service
 	productService := product.NewService()
 
+	// Initialize repository
+	productRepo := product.NewRepository()
+
+	// Initialize gRPC server
+	grpcServer := product.NewGRPCServer(productService, productRepo, product.GetLogger())
 
 	// Setup routes
 	product.SetupRoutes(r, productService)
@@ -54,11 +59,20 @@ func main() {
 	// Start metrics updater
 	go updateMetricsPeriodically(productService)
 
-	// Start server in a goroutine
+	// Start HTTP server in a goroutine
 	go func() {
-		log.Printf("Product service starting on port %d", config.GetPort())
+		log.Printf("Product HTTP service starting on port %d", config.GetPort())
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("Failed to start server:", err)
+			log.Fatal("Failed to start HTTP server:", err)
+		}
+	}()
+
+	// Start gRPC server in a goroutine
+	go func() {
+		grpcPort := config.GetPort() + 1 // gRPC port is HTTP port + 1
+		log.Printf("Product gRPC service starting on port %d", grpcPort)
+		if err := grpcServer.Start(grpcPort); err != nil {
+			log.Fatal("Failed to start gRPC server:", err)
 		}
 	}()
 
@@ -72,11 +86,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Shutdown HTTP server
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown:", err)
+		log.Fatal("HTTP server forced to shutdown:", err)
 	}
 
-	log.Println("Server exited")
+	// Shutdown gRPC server
+	grpcServer.Stop()
+
+	log.Println("Servers exited")
 }
 
 // corsMiddleware adds CORS headers
