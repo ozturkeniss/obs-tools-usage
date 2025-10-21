@@ -41,10 +41,7 @@ func (s *Service) CreateProduct(product Product) (*Product, error) {
 		return nil, err
 	}
 	
-	// Generate new ID
-	product.ID = s.repository.GetNextID()
-	
-	// Create product
+	// Create product (GORM will auto-generate ID)
 	createdProduct, err := s.repository.CreateProduct(product)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create product: %w", err)
