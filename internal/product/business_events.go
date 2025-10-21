@@ -25,7 +25,8 @@ type BusinessEvent struct {
 
 // LogBusinessEvent logs a business event
 func LogBusinessEvent(logger *logrus.Entry, event BusinessEvent) {
-	logger.WithFields(logrus.Fields{
+	// Prepare event fields
+	eventFields := map[string]interface{}{
 		"business_event": true,
 		"event_type":     event.EventType,
 		"event_name":     event.EventName,
@@ -40,7 +41,12 @@ func LogBusinessEvent(logger *logrus.Entry, event BusinessEvent) {
 		"old_value":      event.OldValue,
 		"new_value":      event.NewValue,
 		"metadata":       event.Metadata,
-	}).Info("Business event occurred")
+	}
+	
+	// Mask sensitive data in event fields
+	maskedEventFields := MaskFields(eventFields)
+	
+	logger.WithFields(maskedEventFields).Info("Business event occurred")
 }
 
 // LogProductCreated logs when a product is created
