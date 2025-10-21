@@ -95,6 +95,9 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 		return
 	}
 	
+	// Record Prometheus metrics
+	RecordProductCreated()
+	
 	// Log business event
 	logger := GetLoggerFromContext(c)
 	userID := c.GetHeader("X-User-ID") // Assuming user ID comes from header
@@ -131,6 +134,9 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 		HandleInternalError(c, err)
 		return
 	}
+	
+	// Record Prometheus metrics
+	RecordProductUpdated()
 	
 	// Log business event
 	logger := GetLoggerFromContext(c)
