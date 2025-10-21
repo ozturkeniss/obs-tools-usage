@@ -95,18 +95,24 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-// updateMetricsPeriodically updates business metrics every 30 seconds
+// updateMetricsPeriodically updates metrics periodically
 func updateMetricsPeriodically(service *product.Service) {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
+	// System metrics every 10 seconds
+	systemTicker := time.NewTicker(10 * time.Second)
+	defer systemTicker.Stop()
+	
+	// Business metrics every 30 seconds
+	businessTicker := time.NewTicker(30 * time.Second)
+	defer businessTicker.Stop()
 	
 	for {
 		select {
-		case <-ticker.C:
-			// Update system metrics
+		case <-systemTicker.C:
+			// Update system metrics more frequently
 			product.UpdateSystemMetrics()
 			
-			// Update business metrics by getting all products
+		case <-businessTicker.C:
+			// Update business metrics less frequently
 			products, err := service.GetAllProducts()
 			if err == nil {
 				product.UpdateBusinessMetrics(products)
