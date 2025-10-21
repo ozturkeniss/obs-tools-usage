@@ -11,7 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const RequestIDKey = "request_id"
+const (
+	RequestIDKey     = "request_id"
+	CorrelationIDKey = "correlation_id"
+)
 
 // RequestIDMiddleware adds a unique request ID to each request
 func RequestIDMiddleware() gin.HandlerFunc {
@@ -61,6 +64,16 @@ func GetRequestIDFromContext(c *gin.Context) string {
 	return ""
 }
 
+// GetCorrelationIDFromContext returns correlation ID from context
+func GetCorrelationIDFromContext(c *gin.Context) string {
+	if correlationID, exists := c.Get(CorrelationIDKey); exists {
+		if id, ok := correlationID.(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
 // HTTPLoggingMiddleware logs HTTP requests and responses
 func HTTPLoggingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -91,5 +104,38 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 			"duration_ms": duration.Milliseconds(),
 			"response_size": c.Writer.Size(),
 		}).Info("HTTP request completed")
+	}
+}
+
+// CorrelationIDMiddleware extracts and sets correlation ID from headers
+func CorrelationIDMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Try to get correlation ID from various headers
+		correlationID := c.GetHeader("X-Correlation-ID")
+		if correlationID == "" {
+			correlationID = c.GetHeader("X-Request-ID")
+		}
+		if correlationID == "" {
+			correlationID = c.GetHeader("X-Trace-ID")
+		}
+		
+		// If no correlation ID found, generate one
+		if correlationID == "" {
+			correlationID = generateRequestID()
+		}
+		
+		// Set correlation ID in context
+		c.Set(CorrelationIDKey, correlationID)
+		
+		// Add correlation ID to response headers
+		c.Header("X-Correlation-ID", correlationID)
+		
+		// Update logger with correlation ID
+		logger := GetLoggerFromContext(c)
+		logger = logger.WithField("correlation_id", correlationID)
+		c.Set("logger", logger)
+		
+		// Continue to next handler
+		c.Next()
 	}
 }
