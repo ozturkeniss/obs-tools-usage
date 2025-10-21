@@ -4,9 +4,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var Logger *logrus.Logger
@@ -123,7 +125,7 @@ func getLogOutput(environment string) io.Writer {
 	}
 }
 
-// getFileOutput creates a file output for logging
+// getFileOutput creates a file output for logging with rotation
 func getFileOutput() io.Writer {
 	// Get log directory from environment or use default
 	logDir := os.Getenv("LOG_DIR")
@@ -146,14 +148,72 @@ func getFileOutput() io.Writer {
 	// Create full path
 	logPath := filepath.Join(logDir, logFile)
 	
-	// Open log file for writing (append mode)
-	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		// If we can't open the file, fall back to stdout
-		return os.Stdout
+	// Check if log rotation is enabled
+	rotationEnabled := getEnv("LOG_ROTATION_ENABLED", "true")
+	if strings.ToLower(rotationEnabled) == "false" {
+		// Simple file output without rotation
+		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			return os.Stdout
+		}
+		return file
 	}
 	
-	return file
+	// Configure log rotation
+	rotation := &lumberjack.Logger{
+		Filename:   logPath,
+		MaxSize:    getLogRotationMaxSize(),
+		MaxAge:     getLogRotationMaxAge(),
+		MaxBackups: getLogRotationMaxBackups(),
+		Compress:   getLogRotationCompress(),
+		LocalTime:  true,
+	}
+	
+	return rotation
+}
+
+// getLogRotationMaxSize returns the maximum size for log rotation
+func getLogRotationMaxSize() int {
+	maxSizeStr := getEnv("LOG_MAX_SIZE", "100")
+	maxSize, err := strconv.Atoi(maxSizeStr)
+	if err != nil {
+		return 100 // Default 100 MB
+	}
+	return maxSize
+}
+
+// getLogRotationMaxAge returns the maximum age for log rotation
+func getLogRotationMaxAge() int {
+	maxAgeStr := getEnv("LOG_MAX_AGE", "30")
+	maxAge, err := strconv.Atoi(maxAgeStr)
+	if err != nil {
+		return 30 // Default 30 days
+	}
+	return maxAge
+}
+
+// getLogRotationMaxBackups returns the maximum number of backup files
+func getLogRotationMaxBackups() int {
+	maxBackupsStr := getEnv("LOG_MAX_BACKUPS", "10")
+	maxBackups, err := strconv.Atoi(maxBackupsStr)
+	if err != nil {
+		return 10 // Default 10 backup files
+	}
+	return maxBackups
+}
+
+// getLogRotationCompress returns whether to compress old log files
+func getLogRotationCompress() bool {
+	compressStr := getEnv("LOG_COMPRESS", "true")
+	return strings.ToLower(compressStr) == "true"
+}
+
+// getEnv gets an environment variable with a default value
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 // GetLogger returns the configured logger instance
