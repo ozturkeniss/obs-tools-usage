@@ -1,4 +1,4 @@
-package product
+package grpc
 
 import (
 	"context"
@@ -10,24 +10,38 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"obs-tools-usage/internal/product/application/command"
+	"obs-tools-usage/internal/product/application/handler"
+	"obs-tools-usage/internal/product/application/query"
+	"obs-tools-usage/internal/product/domain/entity"
+	"obs-tools-usage/internal/product/domain/repository"
+	"obs-tools-usage/internal/product/infrastructure/config"
+	"obs-tools-usage/internal/product/infrastructure/external"
+
 	pb "obs-tools-usage/api/proto/product"
 )
 
 // GRPCServer represents the gRPC server
 type GRPCServer struct {
 	pb.UnimplementedProductServiceServer
-	service    *Service
-	repository *Repository
-	logger     *logrus.Logger
-	server     *grpc.Server
+	commandHandler *handler.CommandHandler
+	queryHandler   *handler.QueryHandler
+	repository     repository.ProductRepository
+	logger         *logrus.Logger
+	grpcServer     *grpc.Server
 }
 
 // NewGRPCServer creates a new gRPC server instance
-func NewGRPCServer(service *Service, repository *Repository, logger *logrus.Logger) *GRPCServer {
+func NewGRPCServer(
+	commandHandler *handler.CommandHandler,
+	queryHandler *handler.QueryHandler,
+	repository repository.ProductRepository,
+) *GRPCServer {
 	return &GRPCServer{
-		service:    service,
-		repository: repository,
-		logger:     logger,
+		commandHandler: commandHandler,
+		queryHandler:   queryHandler,
+		repository:     repository,
+		logger:         config.GetLogger(),
 	}
 }
 
@@ -35,72 +49,32 @@ func NewGRPCServer(service *Service, repository *Repository, logger *logrus.Logg
 func (s *GRPCServer) Start(port int) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		return fmt.Errorf("failed to listen on port %d: %w", port, err)
+		return fmt.Errorf("failed to listen: %v", err)
 	}
 
-	// Create gRPC server with options
-	s.server = grpc.NewServer(
-		grpc.UnaryInterceptor(s.unaryLoggingInterceptor),
-	)
-
-	// Register the service
-	pb.RegisterProductServiceServer(s.server, s)
-
-	// Enable reflection for debugging
-	reflection.Register(s.server)
+	s.grpcServer = grpc.NewServer()
+	pb.RegisterProductServiceServer(s.grpcServer, s)
+	reflection.Register(s.grpcServer) // Enable reflection for grpcurl
 
 	s.logger.WithField("port", port).Info("Starting gRPC server")
-
-	// Start serving
-	if err := s.server.Serve(lis); err != nil {
-		return fmt.Errorf("failed to serve gRPC: %w", err)
+	if err := s.grpcServer.Serve(lis); err != nil {
+		return fmt.Errorf("failed to serve: %v", err)
 	}
-
 	return nil
 }
 
-// Stop gracefully stops the gRPC server
+// Stop stops the gRPC server
 func (s *GRPCServer) Stop() {
-	if s.server != nil {
-		s.logger.Info("Stopping gRPC server...")
-		s.server.GracefulStop()
-		s.logger.Info("gRPC server stopped")
-	}
-}
-
-// unaryLoggingInterceptor logs gRPC requests
-func (s *GRPCServer) unaryLoggingInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	start := time.Now()
-	
-	s.logger.WithFields(logrus.Fields{
-		"method": info.FullMethod,
-		"request": req,
-	}).Debug("gRPC request received")
-
-	resp, err := handler(ctx, req)
-	
-	duration := time.Since(start)
-	
-	fields := logrus.Fields{
-		"method":   info.FullMethod,
-		"duration": duration.String(),
-	}
-	
-	if err != nil {
-		fields["error"] = err.Error()
-		s.logger.WithFields(fields).Error("gRPC request failed")
-	} else {
-		s.logger.WithFields(fields).Info("gRPC request completed")
-	}
-
-	return resp, err
+	s.logger.Info("Stopping gRPC server...")
+	s.grpcServer.GracefulStop()
+	s.logger.Info("gRPC server stopped")
 }
 
 // GetProduct implements the GetProduct gRPC method
 func (s *GRPCServer) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.ProductResponse, error) {
 	s.logger.WithField("product_id", req.Id).Debug("GetProduct gRPC request")
 
-	product, err := s.service.GetProductByID(int(req.Id))
+	product, err := s.queryHandler.HandleGetProduct(query.GetProductQuery{ID: int(req.Id)})
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to get product")
 		return nil, err
@@ -119,7 +93,7 @@ func (s *GRPCServer) CreateProduct(ctx context.Context, req *pb.CreateProductReq
 		"price":    req.Price,
 	}).Debug("CreateProduct gRPC request")
 
-	createReq := CreateProductRequest{
+	cmd := command.CreateProductCommand{
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,
@@ -127,17 +101,14 @@ func (s *GRPCServer) CreateProduct(ctx context.Context, req *pb.CreateProductReq
 		Category:    req.Category,
 	}
 
-	var product Product
-	product.FromCreateRequest(createReq)
-	
-	createdProduct, err := s.service.CreateProduct(product)
+	createdProduct, err := s.commandHandler.HandleCreateProduct(cmd)
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to create product")
 		return nil, err
 	}
 
 	// Log business event
-	LogProductCreated(s.logger.WithField("source", "gRPC"), *createdProduct, "gRPC")
+	external.LogProductCreated(s.logger.WithField("source", "gRPC"), *createdProduct, "gRPC")
 
 	return &pb.ProductResponse{
 		Product: s.productToProto(createdProduct),
@@ -153,7 +124,8 @@ func (s *GRPCServer) UpdateProduct(ctx context.Context, req *pb.UpdateProductReq
 		"price":      req.Price,
 	}).Debug("UpdateProduct gRPC request")
 
-	updateReq := UpdateProductRequest{
+	cmd := command.UpdateProductCommand{
+		ID:          int(req.Id),
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,
@@ -161,18 +133,14 @@ func (s *GRPCServer) UpdateProduct(ctx context.Context, req *pb.UpdateProductReq
 		Category:    req.Category,
 	}
 
-	var product Product
-	product.ID = int(req.Id)
-	product.FromUpdateRequest(updateReq)
-	
-	updatedProduct, err := s.service.UpdateProduct(product)
+	updatedProduct, err := s.commandHandler.HandleUpdateProduct(cmd)
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to update product")
 		return nil, err
 	}
 
 	// Log business event
-	LogProductUpdated(s.logger.WithField("source", "gRPC"), product, *updatedProduct, "gRPC")
+	external.LogProductUpdated(s.logger.WithField("source", "gRPC"), *updatedProduct, "gRPC")
 
 	return &pb.ProductResponse{
 		Product: s.productToProto(updatedProduct),
@@ -183,14 +151,14 @@ func (s *GRPCServer) UpdateProduct(ctx context.Context, req *pb.UpdateProductReq
 func (s *GRPCServer) DeleteProduct(ctx context.Context, req *pb.DeleteProductRequest) (*pb.DeleteProductResponse, error) {
 	s.logger.WithField("product_id", req.Id).Debug("DeleteProduct gRPC request")
 
-	err := s.service.DeleteProduct(int(req.Id))
+	err := s.commandHandler.HandleDeleteProduct(command.DeleteProductCommand{ID: int(req.Id)})
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to delete product")
 		return nil, err
 	}
 
 	// Log business event
-	LogProductDeleted(s.logger.WithField("source", "gRPC"), Product{ID: int(req.Id)}, "gRPC")
+	external.LogProductDeleted(s.logger.WithField("source", "gRPC"), int(req.Id), "gRPC")
 
 	return &pb.DeleteProductResponse{
 		Message: "Product deleted successfully",
@@ -201,15 +169,15 @@ func (s *GRPCServer) DeleteProduct(ctx context.Context, req *pb.DeleteProductReq
 func (s *GRPCServer) ListProducts(ctx context.Context, req *pb.ListProductsRequest) (*pb.ListProductsResponse, error) {
 	s.logger.Debug("ListProducts gRPC request")
 
-	products, err := s.service.GetAllProducts()
+	products, err := s.queryHandler.HandleGetProducts(query.GetProductsQuery{})
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to list products")
 		return nil, err
 	}
 
-	protoProducts := make([]*pb.Product, len(products))
-	for i, product := range products {
-		protoProducts[i] = s.productToProto(&product)
+	var protoProducts []*pb.Product
+	for _, p := range products {
+		protoProducts = append(protoProducts, s.productToProto(&p))
 	}
 
 	return &pb.ListProductsResponse{
@@ -221,15 +189,15 @@ func (s *GRPCServer) ListProducts(ctx context.Context, req *pb.ListProductsReque
 func (s *GRPCServer) GetTopMostExpensiveProducts(ctx context.Context, req *pb.GetTopMostExpensiveProductsRequest) (*pb.ListProductsResponse, error) {
 	s.logger.WithField("limit", req.Limit).Debug("GetTopMostExpensiveProducts gRPC request")
 
-	products, err := s.service.GetTopMostExpensive(int(req.Limit))
+	products, err := s.queryHandler.HandleGetTopMostExpensive(query.GetTopMostExpensiveQuery{Limit: int(req.Limit)})
 	if err != nil {
-		s.logger.WithError(err).Error("Failed to get top expensive products")
+		s.logger.WithError(err).Error("Failed to get top most expensive products")
 		return nil, err
 	}
 
-	protoProducts := make([]*pb.Product, len(products))
-	for i, product := range products {
-		protoProducts[i] = s.productToProto(&product)
+	var protoProducts []*pb.Product
+	for _, p := range products {
+		protoProducts = append(protoProducts, s.productToProto(&p))
 	}
 
 	return &pb.ListProductsResponse{
@@ -241,15 +209,15 @@ func (s *GRPCServer) GetTopMostExpensiveProducts(ctx context.Context, req *pb.Ge
 func (s *GRPCServer) GetLowStockProducts(ctx context.Context, req *pb.GetLowStockProductsRequest) (*pb.ListProductsResponse, error) {
 	s.logger.WithField("max_stock", req.MaxStock).Debug("GetLowStockProducts gRPC request")
 
-	products, err := s.service.GetLowStockProducts(int(req.MaxStock))
+	products, err := s.queryHandler.HandleGetLowStockProducts(query.GetLowStockProductsQuery{MaxStock: int(req.MaxStock)})
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to get low stock products")
 		return nil, err
 	}
 
-	protoProducts := make([]*pb.Product, len(products))
-	for i, product := range products {
-		protoProducts[i] = s.productToProto(&product)
+	var protoProducts []*pb.Product
+	for _, p := range products {
+		protoProducts = append(protoProducts, s.productToProto(&p))
 	}
 
 	return &pb.ListProductsResponse{
@@ -261,15 +229,15 @@ func (s *GRPCServer) GetLowStockProducts(ctx context.Context, req *pb.GetLowStoc
 func (s *GRPCServer) GetProductsByCategory(ctx context.Context, req *pb.GetProductsByCategoryRequest) (*pb.ListProductsResponse, error) {
 	s.logger.WithField("category", req.Category).Debug("GetProductsByCategory gRPC request")
 
-	products, err := s.service.GetProductsByCategory(req.Category)
+	products, err := s.queryHandler.HandleGetProductsByCategory(query.GetProductsByCategoryQuery{Category: req.Category})
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to get products by category")
 		return nil, err
 	}
 
-	protoProducts := make([]*pb.Product, len(products))
-	for i, product := range products {
-		protoProducts[i] = s.productToProto(&product)
+	var protoProducts []*pb.Product
+	for _, p := range products {
+		protoProducts = append(protoProducts, s.productToProto(&p))
 	}
 
 	return &pb.ListProductsResponse{
@@ -277,16 +245,16 @@ func (s *GRPCServer) GetProductsByCategory(ctx context.Context, req *pb.GetProdu
 	}, nil
 }
 
-// productToProto converts a Product to protobuf Product
-func (s *GRPCServer) productToProto(product *Product) *pb.Product {
+// productToProto converts an internal Product model to a protobuf Product message
+func (s *GRPCServer) productToProto(p *entity.Product) *pb.Product {
 	return &pb.Product{
-		Id:          int32(product.ID),
-		Name:        product.Name,
-		Description: product.Description,
-		Price:       product.Price,
-		Stock:       int32(product.Stock),
-		Category:    product.Category,
-		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   product.UpdatedAt.Format(time.RFC3339),
+		Id:          int32(p.ID),
+		Name:        p.Name,
+		Description: p.Description,
+		Price:       p.Price,
+		Stock:       int32(p.Stock),
+		Category:    p.Category,
+		CreatedAt:   p.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:   p.UpdatedAt.Format(time.RFC3339),
 	}
 }
