@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ WORKDIR /root/
 COPY --from=builder /app/bin/product-service .
 
 # Expose ports
-EXPOSE 8080 8081
+EXPOSE 8080 50050
 
 # Run the application
 CMD ["./product-service"]
