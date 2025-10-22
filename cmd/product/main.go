@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"obs-tools-usage/internal/product"
 )
@@ -87,7 +86,7 @@ func main() {
 
 	// Start gRPC server in a goroutine
 	go func() {
-		grpcPort := config.GetPort() + 1 // gRPC port is HTTP port + 1
+		grpcPort := 50050 // Fixed gRPC port
 		log.Printf("Product gRPC service starting on port %d", grpcPort)
 		if err := grpcServer.Start(grpcPort); err != nil {
 			log.Fatal("Failed to start gRPC server:", err)
