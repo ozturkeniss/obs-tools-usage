@@ -1,275 +1,282 @@
-package product
+package http
 
 import (
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"obs-tools-usage/internal/product/application/command"
+	"obs-tools-usage/internal/product/application/dto"
+	"obs-tools-usage/internal/product/application/handler"
+	"obs-tools-usage/internal/product/application/query"
+	"obs-tools-usage/internal/product/infrastructure/config"
 )
 
+// Handler handles HTTP requests using CQRS pattern
 type Handler struct {
-	service *Service
+	commandHandler *handler.CommandHandler
+	queryHandler   *handler.QueryHandler
 }
 
-func NewHandler(service *Service) *Handler {
+// NewHandler creates a new HTTP handler
+func NewHandler(commandHandler *handler.CommandHandler, queryHandler *handler.QueryHandler) *Handler {
 	return &Handler{
-		service: service,
+		commandHandler: commandHandler,
+		queryHandler:   queryHandler,
 	}
 }
 
-// SetupRoutes configures all product routes
-func SetupRoutes(r *gin.Engine, service *Service) {
-	handler := NewHandler(service)
-	
-	// Product routes
-	products := r.Group("/products")
-	{
-		products.GET("", handler.GetAllProducts)
-		products.GET("/top-5", handler.GetTop5MostExpensive)
-		products.GET("/top-10", handler.GetTop10MostExpensive)
-		products.GET("/low-stock-1", handler.GetLowStockProducts1)
-		products.GET("/low-stock-10", handler.GetLowStockProducts10)
-		products.GET("/category/:category", handler.GetProductsByCategory)
-		products.GET("/:id", handler.GetProductByID)
-		products.POST("", handler.CreateProduct)
-		products.PUT("/:id", handler.UpdateProduct)
-		products.DELETE("/:id", handler.DeleteProduct)
-	}
-	
-	// Health check
-	r.GET("/health", handler.HealthCheck)
-}
-
-// GetAllProducts returns all products
+// GetAllProducts handles GET /products
 func (h *Handler) GetAllProducts(c *gin.Context) {
-	products, err := h.service.GetAllProducts()
+	products, err := h.queryHandler.HandleGetProducts(query.GetProductsQuery{})
 	if err != nil {
-		HandleInternalError(c, err)
+		HandleError(c, err)
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{"products": products})
+
+	response := dto.ProductsResponse{
+		Products: make([]dto.ProductResponse, len(products)),
+		Count:    len(products),
+	}
+
+	for i, product := range products {
+		response.Products[i] = product.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
-// GetProductByID returns a product by ID
+// GetProductByID handles GET /products/:id
 func (h *Handler) GetProductByID(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		HandleValidationError(c, err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid product ID",
+			Message: "Product ID must be a valid number",
+		})
 		return
 	}
-	
-	product, err := h.service.GetProductByID(id)
+
+	product, err := h.queryHandler.HandleGetProduct(query.GetProductQuery{ID: id})
 	if err != nil {
-		HandleNotFoundError(c, err)
+		HandleError(c, err)
 		return
 	}
-	
-	// Log high value product access
-	if product.Price >= 1000.0 {
-		logger := GetLoggerFromContext(c)
-		userID := c.GetHeader("X-User-ID")
-		LogHighValueProduct(logger, *product, userID)
-	}
-	
-	c.JSON(http.StatusOK, product)
+
+	c.JSON(http.StatusOK, product.ToResponse())
 }
 
-// CreateProduct creates a new product
+// CreateProduct handles POST /products
 func (h *Handler) CreateProduct(c *gin.Context) {
-	var product Product
-	if err := c.ShouldBindJSON(&product); err != nil {
-		HandleValidationError(c, err)
+	var cmd command.CreateProductCommand
+	if err := c.ShouldBindJSON(&cmd); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid request body",
+			Message: err.Error(),
+		})
 		return
 	}
-	
-	createdProduct, err := h.service.CreateProduct(product)
+
+	product, err := h.commandHandler.HandleCreateProduct(cmd)
 	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			HandleConflictError(c, err)
-		} else {
-			HandleInternalError(c, err)
-		}
+		HandleError(c, err)
 		return
 	}
-	
-	// Record Prometheus metrics
-	RecordProductCreated()
-	RecordProductStockLevel(*createdProduct)
-	
-	// Log business event
-	logger := GetLoggerFromContext(c)
-	userID := c.GetHeader("X-User-ID") // Assuming user ID comes from header
-	LogProductCreated(logger, *createdProduct, userID)
-	
-	c.JSON(http.StatusCreated, createdProduct)
+
+	c.JSON(http.StatusCreated, product.ToResponse())
 }
 
-// UpdateProduct updates an existing product
+// UpdateProduct handles PUT /products/:id
 func (h *Handler) UpdateProduct(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		HandleValidationError(c, err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid product ID",
+			Message: "Product ID must be a valid number",
+		})
 		return
 	}
-	
-	var product Product
-	if err := c.ShouldBindJSON(&product); err != nil {
-		HandleValidationError(c, err)
+
+	var cmd command.UpdateProductCommand
+	if err := c.ShouldBindJSON(&cmd); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid request body",
+			Message: err.Error(),
+		})
 		return
 	}
-	
-	// Get old product for comparison
-	oldProduct, err := h.service.GetProductByID(id)
+
+	cmd.ID = id
+
+	product, err := h.commandHandler.HandleUpdateProduct(cmd)
 	if err != nil {
-		HandleNotFoundError(c, err)
+		HandleError(c, err)
 		return
 	}
-	
-	product.ID = id
-	updatedProduct, err := h.service.UpdateProduct(product)
-	if err != nil {
-		HandleInternalError(c, err)
-		return
-	}
-	
-	// Record Prometheus metrics
-	RecordProductUpdated()
-	RecordProductStockLevel(*updatedProduct)
-	
-	// Log business event
-	logger := GetLoggerFromContext(c)
-	userID := c.GetHeader("X-User-ID")
-	LogProductUpdated(logger, *oldProduct, *updatedProduct, userID)
-	
-	c.JSON(http.StatusOK, updatedProduct)
+
+	c.JSON(http.StatusOK, product.ToResponse())
 }
 
-// DeleteProduct deletes a product
+// DeleteProduct handles DELETE /products/:id
 func (h *Handler) DeleteProduct(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		HandleValidationError(c, err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid product ID",
+			Message: "Product ID must be a valid number",
+		})
 		return
 	}
-	
-	// Get product before deletion for logging
-	product, err := h.service.GetProductByID(id)
+
+	err = h.commandHandler.HandleDeleteProduct(command.DeleteProductCommand{ID: id})
 	if err != nil {
-		HandleNotFoundError(c, err)
+		HandleError(c, err)
 		return
 	}
-	
-	err = h.service.DeleteProduct(id)
-	if err != nil {
-		HandleInternalError(c, err)
-		return
-	}
-	
-	// Record Prometheus metrics
-	RecordProductDeleted()
-	
-	// Log business event
-	logger := GetLoggerFromContext(c)
-	userID := c.GetHeader("X-User-ID")
-	LogProductDeleted(logger, *product, userID)
-	
-	c.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
+
+	c.JSON(http.StatusOK, dto.SuccessResponse{
+		Message: "Product deleted successfully",
+	})
 }
 
-// GetTop5MostExpensive returns the 5 most expensive products
+// GetTop5MostExpensive handles GET /products/top-5
 func (h *Handler) GetTop5MostExpensive(c *gin.Context) {
-	products, err := h.service.GetTopMostExpensive(5)
+	products, err := h.queryHandler.HandleGetTopMostExpensive(query.GetTopMostExpensiveQuery{Limit: 5})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{
-		"products": products,
-		"count": len(products),
-		"description": "Top 5 most expensive products",
-	})
+
+	response := dto.ProductsResponse{
+		Products: make([]dto.ProductResponse, len(products)),
+		Count:    len(products),
+	}
+
+	for i, product := range products {
+		response.Products[i] = product.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
-// GetTop10MostExpensive returns the 10 most expensive products
+// GetTop10MostExpensive handles GET /products/top-10
 func (h *Handler) GetTop10MostExpensive(c *gin.Context) {
-	products, err := h.service.GetTopMostExpensive(10)
+	products, err := h.queryHandler.HandleGetTopMostExpensive(query.GetTopMostExpensiveQuery{Limit: 10})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{
-		"products": products,
-		"count": len(products),
-		"description": "Top 10 most expensive products",
-	})
+
+	response := dto.ProductsResponse{
+		Products: make([]dto.ProductResponse, len(products)),
+		Count:    len(products),
+	}
+
+	for i, product := range products {
+		response.Products[i] = product.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
-// GetLowStockProducts1 returns products with stock = 1
+// GetLowStockProducts1 handles GET /products/low-stock-1
 func (h *Handler) GetLowStockProducts1(c *gin.Context) {
-	products, err := h.service.GetLowStockProducts(1)
+	products, err := h.queryHandler.HandleGetLowStockProducts(query.GetLowStockProductsQuery{MaxStock: 1})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{
-		"products": products,
-		"count": len(products),
-		"description": "Products with stock = 1",
-	})
+
+	response := dto.ProductsResponse{
+		Products: make([]dto.ProductResponse, len(products)),
+		Count:    len(products),
+	}
+
+	for i, product := range products {
+		response.Products[i] = product.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
-// GetLowStockProducts10 returns products with stock < 10
+// GetLowStockProducts10 handles GET /products/low-stock-10
 func (h *Handler) GetLowStockProducts10(c *gin.Context) {
-	products, err := h.service.GetLowStockProducts(10)
+	products, err := h.queryHandler.HandleGetLowStockProducts(query.GetLowStockProductsQuery{MaxStock: 10})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{
-		"products": products,
-		"count": len(products),
-		"description": "Products with stock < 10",
-	})
+
+	response := dto.ProductsResponse{
+		Products: make([]dto.ProductResponse, len(products)),
+		Count:    len(products),
+	}
+
+	for i, product := range products {
+		response.Products[i] = product.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
-// GetProductsByCategory returns products by category
+// GetProductsByCategory handles GET /products/category/:category
 func (h *Handler) GetProductsByCategory(c *gin.Context) {
 	category := c.Param("category")
 	if category == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Category parameter is required"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid category",
+			Message: "Category parameter is required",
+		})
 		return
 	}
-	
-	products, err := h.service.GetProductsByCategory(category)
+
+	products, err := h.queryHandler.HandleGetProductsByCategory(query.GetProductsByCategoryQuery{Category: category})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{
-		"products": products,
-		"count": len(products),
-		"category": category,
-		"description": "Products in category: " + category,
+
+	response := dto.ProductsResponse{
+		Products: make([]dto.ProductResponse, len(products)),
+		Count:    len(products),
+	}
+
+	for i, product := range products {
+		response.Products[i] = product.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// HealthCheck handles GET /health
+func (h *Handler) HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, dto.HealthResponse{
+		Service:   "product-service",
+		Status:    "healthy",
+		Timestamp: time.Now().Format(time.RFC3339),
+		Version:   "1.0.0",
 	})
 }
 
-// HealthCheck returns service health status
-func (h *Handler) HealthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":    "healthy",
-		"timestamp": time.Now(),
-		"service":   "product-service",
-		"version":   "1.0.0",
-	})
+// SetupRoutes sets up all routes
+func SetupRoutes(r *gin.Engine, commandHandler *handler.CommandHandler, queryHandler *handler.QueryHandler) {
+	handler := NewHandler(commandHandler, queryHandler)
+
+	// Product routes
+	r.GET("/products", handler.GetAllProducts)
+	r.GET("/products/:id", handler.GetProductByID)
+	r.POST("/products", handler.CreateProduct)
+	r.PUT("/products/:id", handler.UpdateProduct)
+	r.DELETE("/products/:id", handler.DeleteProduct)
+
+	// Query routes
+	r.GET("/products/top-5", handler.GetTop5MostExpensive)
+	r.GET("/products/top-10", handler.GetTop10MostExpensive)
+	r.GET("/products/low-stock-1", handler.GetLowStockProducts1)
+	r.GET("/products/low-stock-10", handler.GetLowStockProducts10)
+	r.GET("/products/category/:category", handler.GetProductsByCategory)
+
+	// Health check
+	r.GET("/health", handler.HealthCheck)
 }
