@@ -11,111 +11,65 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"obs-tools-usage/internal/product/application/usecase"
-	"obs-tools-usage/internal/product/infrastructure/config"
-	"obs-tools-usage/internal/product/infrastructure/persistence"
-	"obs-tools-usage/internal/product/interfaces/grpc"
-	"obs-tools-usage/internal/product/interfaces/http"
 )
 
 func main() {
-	// Load configuration
-	cfg := config.LoadConfig()
-
-	// Set Gin mode based on environment
-	if cfg.IsProduction() {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	// Initialize Gin router with middleware
-	r := gin.New()
+	// TODO: Implement dependency injection with Wire
+	// For now, we'll use a simple approach
 	
-	// Add middleware
+	log.Println("Product service starting...")
+	
+	// Initialize Gin router
+	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	
+	// Add CORS middleware
 	r.Use(corsMiddleware())
-	r.Use(http.CorrelationIDMiddleware())
-	r.Use(http.RequestIDMiddleware())
-	r.Use(http.HTTPLoggingMiddleware())
-	r.Use(http.PerformanceMiddleware())
-
-	// Initialize database
-	db, err := persistence.NewDatabase(&cfg.Database)
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
-	}
-	defer db.Close()
-
-	// Run migrations
-	if err := db.Migrate(); err != nil {
-		log.Fatal("Failed to run migrations:", err)
-	}
-
-	// Seed initial data
-	if err := db.SeedData(); err != nil {
-		log.Fatal("Failed to seed data:", err)
-	}
-
-	// Initialize repository with database
-	productRepo := persistence.NewProductRepositoryImpl(db.DB)
-
-	// Initialize use case
-	productUseCase := usecase.NewProductUseCase(productRepo)
-
-	// Initialize gRPC server
-	grpcServer := grpc.NewGRPCServer(productUseCase, productRepo, config.GetLogger())
-
-	// Setup routes
-	http.SetupRoutes(r, productUseCase)
-
+	
 	// Add Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
+	
+	// Health check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"service":   "product-service",
+			"status":    "healthy",
+			"timestamp": time.Now().Format(time.RFC3339),
+			"version":   "1.0.0",
+		})
+	})
+	
 	// Create HTTP server
 	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
+		Addr:    ":8080",
 		Handler: r,
 	}
-
-	// Start metrics updater
-	go updateMetricsPeriodically(productUseCase)
-
+	
 	// Start HTTP server in a goroutine
 	go func() {
-		log.Printf("Product HTTP service starting on port %d", cfg.GetPort())
+		log.Println("Product HTTP service starting on port 8080")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Failed to start HTTP server:", err)
 		}
 	}()
-
-	// Start gRPC server in a goroutine
-	go func() {
-		grpcPort := 50050 // Fixed gRPC port
-		log.Printf("Product gRPC service starting on port %d", grpcPort)
-		if err := grpcServer.Start(grpcPort); err != nil {
-			log.Fatal("Failed to start gRPC server:", err)
-		}
-	}()
-
+	
 	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Println("Shutting down server...")
-
+	
 	// Give outstanding requests 30 seconds to complete
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-
+	
 	// Shutdown HTTP server
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("HTTP server forced to shutdown:", err)
 	}
-
-	// Shutdown gRPC server
-	grpcServer.Stop()
-
-	log.Println("Servers exited")
+	
+	log.Println("Server exited")
 }
 
 // corsMiddleware adds CORS headers
@@ -131,32 +85,5 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 
 		c.Next()
-	}
-}
-
-// updateMetricsPeriodically updates metrics periodically
-func updateMetricsPeriodically(useCase *usecase.ProductUseCase) {
-	// System metrics every 10 seconds
-	systemTicker := time.NewTicker(10 * time.Second)
-	defer systemTicker.Stop()
-
-	// Business metrics every 30 seconds
-	businessTicker := time.NewTicker(30 * time.Second)
-	defer businessTicker.Stop()
-
-	for {
-		select {
-		case <-systemTicker.C:
-			// Update system metrics more frequently
-			// UpdateSystemMetrics() // TODO: Move to external package
-
-		case <-businessTicker.C:
-			// Update business metrics less frequently
-			products, err := useCase.GetAllProducts()
-			if err == nil {
-				// UpdateBusinessMetrics(products) // TODO: Move to external package
-				_ = products // Temporary to avoid unused variable
-			}
-		}
 	}
 }
