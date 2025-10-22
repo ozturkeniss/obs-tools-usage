@@ -27,37 +27,26 @@ install-proto-deps:
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	@echo "Protobuf dependencies installed!"
 
+# Development
+.PHONY: dev
+dev:
+	@echo "Starting development server..."
+	@chmod +x scripts/dev.sh
+	@./scripts/dev.sh
+
 # Build the application
 .PHONY: build
 build:
 	@echo "Building application..."
-	go build -o bin/product-service cmd/product/main.go
-	@echo "Application built successfully!"
-
-# Run the application
-.PHONY: run
-run: build
-	@echo "Running product service..."
-	./bin/product-service
-
-# Run with hot reload (requires air)
-.PHONY: dev
-dev:
-	@echo "Running in development mode..."
-	air
-
-# Clean build artifacts
-.PHONY: clean
-clean:
-	@echo "Cleaning build artifacts..."
-	rm -rf bin/
-	@echo "Clean completed!"
+	@chmod +x scripts/build.sh
+	@./scripts/build.sh
 
 # Run tests
 .PHONY: test
 test:
 	@echo "Running tests..."
-	go test ./...
+	@chmod +x scripts/test.sh
+	@./scripts/test.sh
 
 # Run tests with coverage
 .PHONY: test-coverage
@@ -67,36 +56,138 @@ test-coverage:
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
-# Lint the code
+# Lint and format code
 .PHONY: lint
 lint:
 	@echo "Running linter..."
-	golangci-lint run
+	@chmod +x scripts/lint.sh
+	@./scripts/lint.sh
 
-# Format the code
+# Format code
 .PHONY: fmt
 fmt:
 	@echo "Formatting code..."
-	go fmt ./...
+	@chmod +x scripts/lint.sh
+	@./scripts/lint.sh format --fix
+
+# Database operations
+.PHONY: db-migrate
+db-migrate:
+	@echo "Running database migrations..."
+	@chmod +x scripts/db.sh
+	@./scripts/db.sh migrate
+
+.PHONY: db-seed
+db-seed:
+	@echo "Seeding database..."
+	@chmod +x scripts/db.sh
+	@./scripts/db.sh seed
+
+.PHONY: db-backup
+db-backup:
+	@echo "Creating database backup..."
+	@chmod +x scripts/db.sh
+	@./scripts/db.sh backup
+
+.PHONY: db-status
+db-status:
+	@echo "Checking database status..."
+	@chmod +x scripts/db.sh
+	@./scripts/db.sh status
+
+# Docker operations
+.PHONY: docker-build
+docker-build:
+	@echo "Building Docker images..."
+	@chmod +x scripts/docker.sh
+	@./scripts/docker.sh build
+
+.PHONY: docker-run
+docker-run:
+	@echo "Running Docker containers..."
+	@chmod +x scripts/docker.sh
+	@./scripts/docker.sh run
+
+.PHONY: docker-stop
+docker-stop:
+	@echo "Stopping Docker containers..."
+	@chmod +x scripts/docker.sh
+	@./scripts/docker.sh stop
+
+.PHONY: docker-clean
+docker-clean:
+	@echo "Cleaning Docker resources..."
+	@chmod +x scripts/docker.sh
+	@./scripts/docker.sh clean
+
+# Cleanup
+.PHONY: clean
+clean:
+	@echo "Cleaning build artifacts..."
+	@chmod +x scripts/clean.sh
+	@./scripts/clean.sh build
+
+.PHONY: clean-all
+clean-all:
+	@echo "Cleaning everything..."
+	@chmod +x scripts/clean.sh
+	@./scripts/clean.sh all --force
 
 # Generate all (proto + build)
 .PHONY: generate
 generate: proto build
 
+# Install development dependencies
+.PHONY: install-deps
+install-deps: install-proto-deps
+	@echo "Installing development dependencies..."
+	go install github.com/google/wire/cmd/wire@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install golang.org/x/tools/cmd/goimports@latest
+	go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+	@echo "Development dependencies installed!"
+
+# Setup project
+.PHONY: setup
+setup: install-deps mod-tidy proto
+	@echo "Project setup completed!"
+
+# Run the application
+.PHONY: run
+run: build
+	@echo "Running product service..."
+	@./bin/product-service
+
 # Help
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  mod-tidy          - Tidy go modules"
-	@echo "  proto             - Generate protobuf files"
-	@echo "  install-proto-deps- Install protobuf dependencies"
-	@echo "  build             - Build the application"
-	@echo "  run               - Run the application"
-	@echo "  dev               - Run in development mode (requires air)"
-	@echo "  clean             - Clean build artifacts"
-	@echo "  test              - Run tests"
-	@echo "  test-coverage     - Run tests with coverage"
-	@echo "  lint              - Run linter"
-	@echo "  fmt               - Format code"
-	@echo "  generate          - Generate proto files and build"
-	@echo "  help              - Show this help message"
+	@echo "  setup          - Setup project (install deps, generate proto)"
+	@echo "  dev            - Start development server"
+	@echo "  build          - Build the application"
+	@echo "  run            - Run the application"
+	@echo "  test           - Run tests"
+	@echo "  test-coverage  - Run tests with coverage"
+	@echo "  lint           - Run linter and format checks"
+	@echo "  fmt            - Format code"
+	@echo "  proto          - Generate protobuf files"
+	@echo "  mod-tidy       - Tidy go modules"
+	@echo "  install-deps   - Install development dependencies"
+	@echo ""
+	@echo "Database targets:"
+	@echo "  db-migrate     - Run database migrations"
+	@echo "  db-seed        - Seed database with initial data"
+	@echo "  db-backup      - Create database backup"
+	@echo "  db-status      - Show database status"
+	@echo ""
+	@echo "Docker targets:"
+	@echo "  docker-build   - Build Docker images"
+	@echo "  docker-run     - Run Docker containers"
+	@echo "  docker-stop    - Stop Docker containers"
+	@echo "  docker-clean   - Clean Docker resources"
+	@echo ""
+	@echo "Cleanup targets:"
+	@echo "  clean          - Clean build artifacts"
+	@echo "  clean-all      - Clean everything"
+	@echo ""
+	@echo "  help           - Show this help message"
