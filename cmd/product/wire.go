@@ -1,7 +1,7 @@
 //go:build wireinject
 // +build wireinject
 
-package infrastructure
+package main
 
 import (
 	"obs-tools-usage/internal/product/application/handler"
