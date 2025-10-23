@@ -1,4 +1,4 @@
-package product
+package http
 
 import (
 	"crypto/rand"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"obs-tools-usage/internal/product/infrastructure/config"
+	"obs-tools-usage/internal/product/infrastructure/external"
 )
 
 const (
@@ -27,7 +29,7 @@ func RequestIDMiddleware() gin.HandlerFunc {
 		c.Header("X-Request-ID", requestID)
 		
 		// Add request ID to logger context
-		logger := Logger.WithField("request_id", requestID)
+		logger := config.GetLogger().WithField("request_id", requestID)
 		c.Set("logger", logger)
 		
 		// Continue to next handler
@@ -49,7 +51,7 @@ func GetLoggerFromContext(c *gin.Context) *logrus.Entry {
 			return logEntry
 		}
 	}
-	return Logger.WithField("source", "middleware")
+	return config.GetLogger().WithField("source", "middleware")
 }
 
 // GetRequestIDFromContext returns request ID from context
@@ -79,8 +81,8 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 		logger := GetLoggerFromContext(c)
 		
 		// Track active connections
-		httpConnections.Inc()
-		defer httpConnections.Dec()
+		// httpConnections.Inc()
+		// defer httpConnections.Dec()
 		
 		// Prepare request fields
 		requestFields := map[string]interface{}{
@@ -92,7 +94,8 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 		}
 		
 		// Mask sensitive data in request fields
-		maskedRequestFields := MaskFields(requestFields)
+		// maskedRequestFields := MaskFields(requestFields)
+		maskedRequestFields := requestFields
 		
 		// Log incoming request
 		logger.WithFields(maskedRequestFields).Info("Incoming HTTP request")
@@ -121,7 +124,7 @@ func HTTPLoggingMiddleware() gin.HandlerFunc {
 		}
 		
 		// Record Prometheus metrics
-		RecordHTTPRequest(
+		external.RecordHTTPRequest(
 			c.Request.Method,
 			c.Request.URL.Path,
 			c.Writer.Status(),
