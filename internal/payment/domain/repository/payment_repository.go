@@ -28,6 +28,15 @@ type PaymentRepository interface {
 	GetTotalRevenue(startDate, endDate string) (float64, error)
 	GetPaymentCountByStatus(status entity.PaymentStatus) (int64, error)
 	
+	// New query methods
+	GetPaymentsByAmountRange(minAmount, maxAmount float64) ([]*entity.Payment, error)
+	GetPaymentsByMethod(method string) ([]*entity.Payment, error)
+	GetPaymentsByProvider(provider string) ([]*entity.Payment, error)
+	GetPaymentAnalytics() (*PaymentAnalytics, error)
+	GetPaymentMethods() ([]string, error)
+	GetPaymentProviders() ([]string, error)
+	GetPaymentSummary() (*PaymentSummary, error)
+	
 	// Health check
 	Ping() error
 }
