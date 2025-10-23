@@ -21,6 +21,7 @@ import (
 	"obs-tools-usage/internal/payment/infrastructure/persistence"
 	httpInterface "obs-tools-usage/internal/payment/interfaces/http"
 	grpcInterface "obs-tools-usage/internal/payment/interfaces/grpc"
+	"obs-tools-usage/kafka/publisher"
 )
 
 func main() {
@@ -71,8 +72,17 @@ func main() {
 	// Initialize repository
 	paymentRepo := persistence.NewPaymentRepositoryImpl(database.DB, logger)
 	
+	// Initialize Kafka publisher
+	kafkaBrokers := []string{"localhost:9092"} // In production, this should come from config
+	kafkaPublisher, err := publisher.NewPaymentPublisher(kafkaBrokers, logger)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to initialize Kafka publisher")
+	}
+	defer kafkaPublisher.Close()
+	logger.Info("Connected to Kafka")
+	
 	// Initialize use case
-	paymentUseCase := usecase.NewPaymentUseCase(paymentRepo, basketClient, productClient, logger)
+	paymentUseCase := usecase.NewPaymentUseCase(paymentRepo, basketClient, productClient, kafkaPublisher, logger)
 	
 	// Initialize handlers
 	commandHandler := handler.NewCommandHandler(paymentUseCase)
