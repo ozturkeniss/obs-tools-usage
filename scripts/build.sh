@@ -165,7 +165,7 @@ ls -la bin/
 
 # Show file sizes
 print_status "Binary sizes:"
-for file in bin/*-service-*; do
+for file in bin/*-service-* fiberv2-gateway/bin/gateway-*; do
     if [ -f "$file" ]; then
         size=$(du -h "$file" | cut -f1)
         echo "  $(basename "$file"): $size"
