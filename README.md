@@ -216,17 +216,22 @@ go build -o bin/basket-service cmd/basket/main.go
 |---------|------|-------------|
 | `product-service` | `8080`, `50050` | Product management service |
 | `basket-service` | `8081`, `50051` | Shopping basket service |
+| `payment-service` | `8082`, `50052` | Payment processing service |
 | `postgres` | `5432` | PostgreSQL database |
 | `redis` | `6379` | Redis cache |
+| `mariadb` | `3306` | MariaDB database |
+| `kafka` | `9092`, `9101` | Apache Kafka message broker |
+| `zookeeper` | `2181` | Apache Zookeeper for Kafka |
 
 ### Technology Stack
 
 | Component | Technology |
 |-----------|------------|
-| **Language** | Go 1.21+ |
+| **Language** | Go 1.24+ |
 | **Framework** | Gin (HTTP), gRPC |
-| **Database** | PostgreSQL, Redis |
+| **Database** | PostgreSQL, Redis, MariaDB |
+| **Message Broker** | Apache Kafka |
 | **DI** | Wire |
 | **Monitoring** | Prometheus |
 | **Logging** | Logrus |
-| **Architecture** | DDD, CQRS, Clean Architecture |
+| **Architecture** | DDD, CQRS, Clean Architecture, Event-Driven |
