@@ -350,7 +350,7 @@ func (uc *PaymentUseCase) itemsToResponse(items []*entity.PaymentItem) []dto.Pay
 
 // GetPaymentsByStatus retrieves payments by status
 func (uc *PaymentUseCase) GetPaymentsByStatus(status string) ([]*dto.PaymentResponse, error) {
-	payments, err := uc.paymentRepo.GetPaymentsByStatus(status)
+	payments, err := uc.paymentRepo.GetPaymentsByStatus(entity.PaymentStatus(status))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get payments by status: %w", err)
 	}
@@ -556,5 +556,5 @@ func (uc *PaymentUseCase) RetryPayment(paymentID string) (*dto.PaymentResponse, 
 	}
 
 	// Process the payment again
-	return uc.ProcessPayment(paymentID)
+	return uc.ProcessPayment(paymentID, "")
 }
