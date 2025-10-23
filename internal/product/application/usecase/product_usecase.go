@@ -113,3 +113,38 @@ func (uc *ProductUseCase) GetLowStockProducts(maxStock int) ([]entity.Product, e
 func (uc *ProductUseCase) GetProductsByCategory(category string) ([]entity.Product, error) {
 	return uc.productRepo.GetProductsByCategory(category)
 }
+
+// GetProductsByPriceRange returns products by price range
+func (uc *ProductUseCase) GetProductsByPriceRange(minPrice, maxPrice float64) ([]entity.Product, error) {
+	return uc.productRepo.GetProductsByPriceRange(minPrice, maxPrice)
+}
+
+// GetProductsByName returns products by name
+func (uc *ProductUseCase) GetProductsByName(name string) ([]entity.Product, error) {
+	return uc.productRepo.GetProductsByName(name)
+}
+
+// GetProductStats returns product statistics
+func (uc *ProductUseCase) GetProductStats() (*entity.ProductStats, error) {
+	return uc.productRepo.GetProductStats()
+}
+
+// GetCategories returns all categories
+func (uc *ProductUseCase) GetCategories() ([]entity.Category, error) {
+	return uc.productRepo.GetCategories()
+}
+
+// GetProductsByStock returns products by stock level
+func (uc *ProductUseCase) GetProductsByStock(stock int) ([]entity.Product, error) {
+	return uc.productRepo.GetProductsByStock(stock)
+}
+
+// GetRandomProducts returns random products
+func (uc *ProductUseCase) GetRandomProducts(count int) ([]entity.Product, error) {
+	return uc.productRepo.GetRandomProducts(count)
+}
+
+// GetProductsByDateRange returns products by date range
+func (uc *ProductUseCase) GetProductsByDateRange(startDate, endDate string) ([]entity.Product, error) {
+	return uc.productRepo.GetProductsByDateRange(startDate, endDate)
+}
