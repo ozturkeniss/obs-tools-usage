@@ -155,6 +155,19 @@ services:
       - LOAD_BALANCER_ENABLED=true
       - LOAD_BALANCER_STRATEGY=round_robin
       - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_REQUESTS=100
+      - RATE_LIMIT_WINDOW=1m
+      - RATE_LIMIT_BURST=10
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=1
+      - REDIS_POOL_SIZE=10
+      - REDIS_MIN_IDLE_CONNS=5
+      - REDIS_MAX_RETRIES=3
+      - REDIS_DIAL_TIMEOUT=5s
+      - REDIS_READ_TIMEOUT=3s
+      - REDIS_WRITE_TIMEOUT=3s
       - HEALTH_CHECK_ENABLED=true
       - METRICS_ENABLED=true
     depends_on:
