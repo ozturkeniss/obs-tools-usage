@@ -302,3 +302,111 @@ func (r *PaymentRepositoryImpl) Ping() error {
 	}
 	return sqlDB.Ping()
 }
+
+// GetPaymentsByAmountRange retrieves payments by amount range
+func (r *MariaDBPaymentRepository) GetPaymentsByAmountRange(minAmount, maxAmount float64) ([]*entity.Payment, error) {
+	var payments []*entity.Payment
+	err := r.db.Where("amount >= ? AND amount <= ?", minAmount, maxAmount).Find(&payments).Error
+	return payments, err
+}
+
+// GetPaymentsByMethod retrieves payments by method
+func (r *MariaDBPaymentRepository) GetPaymentsByMethod(method string) ([]*entity.Payment, error) {
+	var payments []*entity.Payment
+	err := r.db.Where("method = ?", method).Find(&payments).Error
+	return payments, err
+}
+
+// GetPaymentsByProvider retrieves payments by provider
+func (r *MariaDBPaymentRepository) GetPaymentsByProvider(provider string) ([]*entity.Payment, error) {
+	var payments []*entity.Payment
+	err := r.db.Where("provider = ?", provider).Find(&payments).Error
+	return payments, err
+}
+
+// GetPaymentAnalytics retrieves payment analytics
+func (r *MariaDBPaymentRepository) GetPaymentAnalytics() (*PaymentAnalytics, error) {
+	var analytics PaymentAnalytics
+	
+	// Total payments
+	r.db.Model(&entity.Payment{}).Count(&analytics.TotalPayments)
+	
+	// Total revenue
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusCompleted).Select("COALESCE(SUM(amount), 0)").Scan(&analytics.TotalRevenue)
+	
+	// Success rate
+	var completed, total int64
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusCompleted).Count(&completed)
+	r.db.Model(&entity.Payment{}).Count(&total)
+	if total > 0 {
+		analytics.SuccessRate = float64(completed) / float64(total) * 100
+	}
+	
+	// Average amount
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusCompleted).Select("COALESCE(AVG(amount), 0)").Scan(&analytics.AverageAmount)
+	
+	// Top payment method
+	var topMethod string
+	r.db.Model(&entity.Payment{}).Select("method").Group("method").Order("COUNT(*) DESC").Limit(1).Scan(&topMethod)
+	analytics.TopPaymentMethod = topMethod
+	
+	// Top provider
+	var topProvider string
+	r.db.Model(&entity.Payment{}).Select("provider").Group("provider").Order("COUNT(*) DESC").Limit(1).Scan(&topProvider)
+	analytics.TopProvider = topProvider
+	
+	// Daily transactions (last 24 hours)
+	r.db.Model(&entity.Payment{}).Where("created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)").Count(&analytics.DailyTransactions)
+	
+	// Monthly revenue (current month)
+	r.db.Model(&entity.Payment{}).Where("status = ? AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')", entity.PaymentStatusCompleted).Select("COALESCE(SUM(amount), 0)").Scan(&analytics.MonthlyRevenue)
+	
+	return &analytics, nil
+}
+
+// GetPaymentMethods retrieves available payment methods
+func (r *MariaDBPaymentRepository) GetPaymentMethods() ([]string, error) {
+	var methods []string
+	err := r.db.Model(&entity.Payment{}).Distinct("method").Pluck("method", &methods).Error
+	return methods, err
+}
+
+// GetPaymentProviders retrieves available payment providers
+func (r *MariaDBPaymentRepository) GetPaymentProviders() ([]string, error) {
+	var providers []string
+	err := r.db.Model(&entity.Payment{}).Distinct("provider").Pluck("provider", &providers).Error
+	return providers, err
+}
+
+// GetPaymentSummary retrieves payment summary
+func (r *MariaDBPaymentRepository) GetPaymentSummary() (*PaymentSummary, error) {
+	var summary PaymentSummary
+	
+	// Total payments
+	r.db.Model(&entity.Payment{}).Count(&summary.TotalPayments)
+	
+	// Total revenue
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusCompleted).Select("COALESCE(SUM(amount), 0)").Scan(&summary.TotalRevenue)
+	
+	// Pending payments
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusPending).Count(&summary.PendingPayments)
+	
+	// Completed payments
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusCompleted).Count(&summary.CompletedPayments)
+	
+	// Failed payments
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusFailed).Count(&summary.FailedPayments)
+	
+	// Refunded payments
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusRefunded).Count(&summary.RefundedPayments)
+	
+	// Success rate
+	if summary.TotalPayments > 0 {
+		summary.SuccessRate = float64(summary.CompletedPayments) / float64(summary.TotalPayments) * 100
+	}
+	
+	// Average amount
+	r.db.Model(&entity.Payment{}).Where("status = ?", entity.PaymentStatusCompleted).Select("COALESCE(AVG(amount), 0)").Scan(&summary.AverageAmount)
+	
+	return &summary, nil
+}
