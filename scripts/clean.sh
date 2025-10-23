@@ -142,13 +142,15 @@ clean_docker() {
     print_status "Stopping containers..."
     docker-compose down 2>/dev/null || true
     
-    # Remove product service containers
-    print_status "Removing product service containers..."
+    # Remove service containers
+    print_status "Removing service containers..."
     docker ps -a --filter "name=product-service" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+    docker ps -a --filter "name=basket-service" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
     
-    # Remove product service images
-    print_status "Removing product service images..."
+    # Remove service images
+    print_status "Removing service images..."
     docker images "product-service*" -q | xargs -r docker rmi -f 2>/dev/null || true
+    docker images "basket-service*" -q | xargs -r docker rmi -f 2>/dev/null || true
     
     # Remove unused images
     if [ "$FORCE" = true ]; then
