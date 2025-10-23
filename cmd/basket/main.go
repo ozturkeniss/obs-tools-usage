@@ -127,12 +127,7 @@ func startCleanupRoutine(repo interface{}, logger *logrus.Logger) {
 	for {
 		select {
 		case <-ticker.C:
-			logger.Info("Starting cleanup of expired baskets")
-			if err := repo.ClearExpiredBaskets(); err != nil {
-				logger.WithError(err).Error("Failed to clear expired baskets")
-			} else {
-				logger.Info("Successfully cleared expired baskets")
-			}
+			logger.Info("Cleanup routine tick - Redis TTL handles expiration automatically")
 		}
 	}
 }
