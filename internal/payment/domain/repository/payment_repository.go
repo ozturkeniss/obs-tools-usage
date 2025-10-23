@@ -50,3 +50,27 @@ type PaymentStats struct {
 	PendingPayments   int64   `json:"pending_payments"`
 	AverageAmount     float64 `json:"average_amount"`
 }
+
+// PaymentAnalytics represents payment analytics
+type PaymentAnalytics struct {
+	TotalPayments     int64   `json:"total_payments"`
+	TotalRevenue      float64 `json:"total_revenue"`
+	SuccessRate       float64 `json:"success_rate"`
+	AverageAmount     float64 `json:"average_amount"`
+	TopPaymentMethod  string  `json:"top_payment_method"`
+	TopProvider       string  `json:"top_provider"`
+	DailyTransactions int64   `json:"daily_transactions"`
+	MonthlyRevenue    float64 `json:"monthly_revenue"`
+}
+
+// PaymentSummary represents payment summary
+type PaymentSummary struct {
+	TotalPayments     int64   `json:"total_payments"`
+	TotalRevenue      float64 `json:"total_revenue"`
+	PendingPayments   int64   `json:"pending_payments"`
+	CompletedPayments int64   `json:"completed_payments"`
+	FailedPayments    int64   `json:"failed_payments"`
+	RefundedPayments  int64   `json:"refunded_payments"`
+	SuccessRate       float64 `json:"success_rate"`
+	AverageAmount     float64 `json:"average_amount"`
+}
