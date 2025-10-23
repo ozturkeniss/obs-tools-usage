@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package payment;
+
+option go_package = "obs-tools-usage/api/proto/payment";
+
+// Payment service definition
+service PaymentService {
+    // Payment operations
+    rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+    rpc GetPayment(GetPaymentRequest) returns (GetPaymentResponse);
+    rpc UpdatePayment(UpdatePaymentRequest) returns (UpdatePaymentResponse);
+    rpc ProcessPayment(ProcessPaymentRequest) returns (ProcessPaymentResponse);
+    rpc RefundPayment(RefundPaymentRequest) returns (RefundPaymentResponse);
+    
+    // Query operations
+    rpc GetPaymentsByUser(GetPaymentsByUserRequest) returns (GetPaymentsByUserResponse);
+    rpc GetPaymentStats(GetPaymentStatsRequest) returns (GetPaymentStatsResponse);
+    
+    // Health check
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Payment item message
+message PaymentItem {
+    string id = 1;
+    int32 product_id = 2;
+    string name = 3;
+    int32 quantity = 4;
+    double price = 5;
+    double subtotal = 6;
+    string category = 7;
+    string created_at = 8;
+}
+
+// Payment message
+message Payment {
+    string id = 1;
+    string user_id = 2;
+    string basket_id = 3;
+    double amount = 4;
+    string currency = 5;
+    string status = 6;
+    string method = 7;
+    string provider = 8;
+    string provider_id = 9;
+    string description = 10;
+    string created_at = 11;
+    string updated_at = 12;
+    string processed_at = 13;
+    string expires_at = 14;
+    repeated PaymentItem items = 15;
+}
+
+// Request messages
+message CreatePaymentRequest {
+    string user_id = 1;
+    string basket_id = 2;
+    string method = 3;
+    string provider = 4;
+    string currency = 5;
+    string description = 6;
+}
+
+message GetPaymentRequest {
+    string payment_id = 1;
+}
+
+message UpdatePaymentRequest {
+    string payment_id = 1;
+    string status = 2;
+}
+
+message ProcessPaymentRequest {
+    string payment_id = 1;
+    string provider_id = 2;
+}
+
+message RefundPaymentRequest {
+    string payment_id = 1;
+    double amount = 2;
+    string reason = 3;
+}
+
+message GetPaymentsByUserRequest {
+    string user_id = 1;
+}
+
+message GetPaymentStatsRequest {
+    string user_id = 1;
+}
+
+message HealthCheckRequest {
+    string service = 1;
+}
+
+// Response messages
+message CreatePaymentResponse {
+    bool success = 1;
+    string message = 2;
+    Payment payment = 3;
+}
+
+message GetPaymentResponse {
+    bool success = 1;
+    string message = 2;
+    Payment payment = 3;
+}
+
+message UpdatePaymentResponse {
+    bool success = 1;
+    string message = 2;
+    Payment payment = 3;
+}
+
+message ProcessPaymentResponse {
+    bool success = 1;
+    string message = 2;
+    Payment payment = 3;
+}
+
+message RefundPaymentResponse {
+    bool success = 1;
+    string message = 2;
+    Payment payment = 3;
+}
+
+message GetPaymentsByUserResponse {
+    bool success = 1;
+    string message = 2;
+    repeated Payment payments = 3;
+}
+
+message PaymentStats {
+    int64 total_payments = 1;
+    double total_amount = 2;
+    int64 completed_payments = 3;
+    int64 failed_payments = 4;
+    int64 pending_payments = 5;
+    double average_amount = 6;
+}
+
+message GetPaymentStatsResponse {
+    bool success = 1;
+    string message = 2;
+    PaymentStats stats = 3;
+}
+
+message HealthCheckResponse {
+    bool success = 1;
+    string message = 2;
+    string service = 3;
+    string status = 4;
+    string timestamp = 5;
+    string version = 6;
+}
