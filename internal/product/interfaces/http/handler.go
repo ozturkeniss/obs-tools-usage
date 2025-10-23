@@ -613,6 +613,13 @@ func SetupRoutes(r *gin.Engine, commandHandler *handler.CommandHandler, queryHan
 	r.GET("/products/low-stock-1", handler.GetLowStockProducts1)
 	r.GET("/products/low-stock-10", handler.GetLowStockProducts10)
 	r.GET("/products/category/:category", handler.GetProductsByCategory)
+	r.GET("/products/price/:min/:max", handler.GetProductsByPriceRange)
+	r.GET("/products/search/:name", handler.GetProductsByName)
+	r.GET("/products/stats", handler.GetProductStats)
+	r.GET("/products/categories", handler.GetCategories)
+	r.GET("/products/stock/:stock", handler.GetProductsByStock)
+	r.GET("/products/random/:count", handler.GetRandomProducts)
+	r.GET("/products/created/:start/:end", handler.GetProductsByDateRange)
 
 	// Health check
 	r.GET("/health", handler.HealthCheck)
