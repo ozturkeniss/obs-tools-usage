@@ -93,26 +93,3 @@ func (p *Product) FromUpdateRequest(req UpdateProductRequest) {
 	p.Category = req.Category
 	p.UpdatedAt = time.Now()
 }
-
-// ToResponse converts a Product to ProductResponse
-func (p *Product) ToResponse() interface{} {
-	return struct {
-		ID          int       `json:"id"`
-		Name        string    `json:"name"`
-		Description string    `json:"description"`
-		Price       float64   `json:"price"`
-		Stock       int       `json:"stock"`
-		Category    string    `json:"category"`
-		CreatedAt   time.Time `json:"created_at"`
-		UpdatedAt   time.Time `json:"updated_at"`
-	}{
-		ID:          p.ID,
-		Name:        p.Name,
-		Description: p.Description,
-		Price:       p.Price,
-		Stock:       p.Stock,
-		Category:    p.Category,
-		CreatedAt:   p.CreatedAt,
-		UpdatedAt:   p.UpdatedAt,
-	}
-}
