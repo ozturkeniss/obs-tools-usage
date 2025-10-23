@@ -64,6 +64,7 @@ services:
     container_name: basket-service
     ports:
       - "8081:8081"
+      - "50051:50051"
     environment:
       - ENVIRONMENT=development
       - PORT=8081
