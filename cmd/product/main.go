@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,13 +11,57 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+
+	"obs-tools-usage/internal/product/application/handler"
+	"obs-tools-usage/internal/product/application/usecase"
+	"obs-tools-usage/internal/product/infrastructure/config"
+	"obs-tools-usage/internal/product/infrastructure/persistence"
+	"obs-tools-usage/internal/product/interfaces/grpc"
+	httpInterface "obs-tools-usage/internal/product/interfaces/http"
 )
 
+//go:generate wire
+
 func main() {
-	// TODO: Implement dependency injection with Wire
-	// For now, we'll use a simple approach
+	// Load configuration
+	cfg := config.LoadConfig()
+	logger := config.GetLogger()
 	
-	log.Println("Product service starting...")
+	logger.Info("Product service starting...")
+	
+	// Initialize database
+	db, err := persistence.NewDatabase(&cfg.Database)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to initialize database")
+	}
+	defer db.Close()
+	
+	// Run database migrations
+	if err := db.Migrate(); err != nil {
+		logger.WithError(err).Fatal("Failed to run database migrations")
+	}
+	
+	// Seed database with initial data
+	if err := db.SeedData(); err != nil {
+		logger.WithError(err).Warn("Failed to seed database")
+	}
+	
+	// Initialize repository
+	productRepo := persistence.NewProductRepositoryImpl(db.DB)
+	
+	// Initialize use case
+	productUseCase := usecase.NewProductUseCase(productRepo)
+	
+	// Initialize handlers
+	commandHandler := handler.NewCommandHandler(productUseCase)
+	queryHandler := handler.NewQueryHandler(productUseCase)
+	
+	// Initialize HTTP handler
+	httpHandler := httpInterface.NewHandler(commandHandler, queryHandler)
+	
+	// Initialize gRPC server
+	grpcServer := grpc.NewGRPCServer(commandHandler, queryHandler, productRepo)
 	
 	// Initialize Gin router
 	r := gin.New()
@@ -30,27 +74,28 @@ func main() {
 	// Add Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	
-	// Health check endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"service":   "product-service",
-			"status":    "healthy",
-			"timestamp": time.Now().Format(time.RFC3339),
-			"version":   "1.0.0",
-		})
-	})
+	// Setup HTTP routes
+	httpInterface.SetupRoutes(r, commandHandler, queryHandler)
 	
 	// Create HTTP server
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":" + cfg.Port,
 		Handler: r,
 	}
 	
 	// Start HTTP server in a goroutine
 	go func() {
-		log.Println("Product HTTP service starting on port 8080")
+		logger.WithField("port", cfg.Port).Info("Starting HTTP server")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("Failed to start HTTP server:", err)
+			logger.WithError(err).Fatal("Failed to start HTTP server")
+		}
+	}()
+	
+	// Start gRPC server in a goroutine
+	go func() {
+		logger.WithField("port", 50050).Info("Starting gRPC server")
+		if err := grpcServer.Start(50050); err != nil {
+			logger.WithError(err).Fatal("Failed to start gRPC server")
 		}
 	}()
 	
@@ -58,18 +103,21 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	logger.Info("Shutting down server...")
 	
 	// Give outstanding requests 30 seconds to complete
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	
+	// Shutdown gRPC server
+	grpcServer.Stop()
+	
 	// Shutdown HTTP server
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("HTTP server forced to shutdown:", err)
+		logger.WithError(err).Fatal("HTTP server forced to shutdown")
 	}
 	
-	log.Println("Server exited")
+	logger.Info("Server exited")
 }
 
 // corsMiddleware adds CORS headers
