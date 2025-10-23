@@ -139,3 +139,14 @@ func (p *Payment) CalculateTotal(items []PaymentItem) {
 	p.Amount = total
 	p.UpdatedAt = time.Now()
 }
+
+// MarkAsPending marks payment as pending
+func (p *Payment) MarkAsPending() {
+	p.Status = PaymentStatusPending
+	p.UpdatedAt = time.Now()
+}
+
+// CanBeRetried checks if payment can be retried
+func (p *Payment) CanBeRetried() bool {
+	return p.Status == PaymentStatusFailed
+}
