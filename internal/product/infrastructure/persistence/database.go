@@ -1,4 +1,4 @@
-package product
+package persistence
 
 import (
 	"fmt"
@@ -8,6 +8,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"obs-tools-usage/internal/product/domain/entity"
+	"obs-tools-usage/internal/product/infrastructure/config"
 )
 
 // gormLogWriter implements logger.Writer interface for GORM
@@ -22,15 +24,15 @@ func (w *gormLogWriter) Printf(format string, args ...interface{}) {
 // Database represents the database connection
 type Database struct {
 	DB     *gorm.DB
-	Config *DatabaseConfig
+	Config *config.DatabaseConfig
 	Logger *logrus.Logger
 }
 
 // NewDatabase creates a new database connection
-func NewDatabase(config *DatabaseConfig) (*Database, error) {
+func NewDatabase(config *config.DatabaseConfig) (*Database, error) {
 	// Create GORM logger
 	gormLogger := logger.New(
-		&gormLogWriter{logger: Logger},
+		&gormLogWriter{logger: config.GetLogger()},
 		logger.Config{
 			SlowThreshold:             200 * time.Millisecond,
 			LogLevel:                  logger.Warn,
@@ -62,7 +64,8 @@ func NewDatabase(config *DatabaseConfig) (*Database, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	Logger.WithFields(logrus.Fields{
+	logger := config.GetLogger()
+	logger.WithFields(logrus.Fields{
 		"host":     config.Host,
 		"port":     config.Port,
 		"database": config.DBName,
@@ -72,7 +75,7 @@ func NewDatabase(config *DatabaseConfig) (*Database, error) {
 	return &Database{
 		DB:     db,
 		Config: config,
-		Logger: Logger,
+		Logger: logger,
 	}, nil
 }
 
