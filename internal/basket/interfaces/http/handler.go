@@ -416,6 +416,16 @@ func SetupRoutes(r *gin.Engine, commandHandler *handler.CommandHandler, queryHan
 	r.DELETE("/baskets/:user_id/items", handler.ClearBasket)
 	r.DELETE("/baskets/:user_id", handler.DeleteBasket)
 
+	// Query routes
+	r.GET("/baskets/:user_id/items", handler.GetBasketItems)
+	r.GET("/baskets/:user_id/total", handler.GetBasketTotal)
+	r.GET("/baskets/:user_id/count", handler.GetBasketItemCount)
+	r.GET("/baskets/:user_id/category/:category", handler.GetBasketByCategory)
+	r.GET("/baskets/:user_id/stats", handler.GetBasketStats)
+	r.GET("/baskets/:user_id/expiry", handler.GetBasketExpiry)
+	r.GET("/baskets/:user_id/history", handler.GetBasketHistory)
+	r.GET("/baskets/:user_id/recommendations", handler.GetBasketRecommendations)
+
 	// Health check
 	r.GET("/health", handler.HealthCheck)
 }
