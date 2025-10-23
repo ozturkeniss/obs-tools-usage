@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 
 	"obs-tools-usage/internal/payment/domain/entity"
 	"obs-tools-usage/internal/payment/domain/repository"
