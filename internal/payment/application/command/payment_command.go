@@ -70,3 +70,27 @@ func (c *RefundPaymentCommand) ToDTO() dto.RefundPaymentRequest {
 		Reason:    c.Reason,
 	}
 }
+
+// CancelPaymentCommand represents a command to cancel a payment
+type CancelPaymentCommand struct {
+	PaymentID string `json:"payment_id" binding:"required"`
+}
+
+// ToDTO converts command to DTO
+func (c *CancelPaymentCommand) ToDTO() dto.CancelPaymentRequest {
+	return dto.CancelPaymentRequest{
+		PaymentID: c.PaymentID,
+	}
+}
+
+// RetryPaymentCommand represents a command to retry a payment
+type RetryPaymentCommand struct {
+	PaymentID string `json:"payment_id" binding:"required"`
+}
+
+// ToDTO converts command to DTO
+func (c *RetryPaymentCommand) ToDTO() dto.RetryPaymentRequest {
+	return dto.RetryPaymentRequest{
+		PaymentID: c.PaymentID,
+	}
+}
