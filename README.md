@@ -227,7 +227,7 @@ go build -o bin/basket-service cmd/basket/main.go
 
 | Component | Technology |
 |-----------|------------|
-| **Language** | Go 1.24+ |
+| **Language** | Go 1.22+ |
 | **Framework** | Gin (HTTP), gRPC |
 | **Database** | PostgreSQL, Redis, MariaDB |
 | **Message Broker** | Apache Kafka |
