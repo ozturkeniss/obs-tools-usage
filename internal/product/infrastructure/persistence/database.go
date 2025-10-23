@@ -29,7 +29,7 @@ type Database struct {
 }
 
 // NewDatabase creates a new database connection
-func NewDatabase(config *config.DatabaseConfig) (*Database, error) {
+func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 	// Create GORM logger
 	gormLogger := logger.New(
 		&gormLogWriter{logger: config.GetLogger()},
@@ -43,7 +43,7 @@ func NewDatabase(config *config.DatabaseConfig) (*Database, error) {
 
 	// Build DSN
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.Host, config.Port, config.User, config.Password, config.DBName, config.SSLMode)
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode)
 
 	// Connect to database
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
@@ -66,15 +66,15 @@ func NewDatabase(config *config.DatabaseConfig) (*Database, error) {
 
 	logger := config.GetLogger()
 	logger.WithFields(logrus.Fields{
-		"host":     config.Host,
-		"port":     config.Port,
-		"database": config.DBName,
-		"user":     config.User,
+		"host":     cfg.Host,
+		"port":     cfg.Port,
+		"database": cfg.DBName,
+		"user":     cfg.User,
 	}).Info("Database connected successfully")
 
 	return &Database{
 		DB:     db,
-		Config: config,
+		Config: cfg,
 		Logger: logger,
 	}, nil
 }
