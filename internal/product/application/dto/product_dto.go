@@ -50,6 +50,29 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
+// ProductStatsResponse represents product statistics response
+type ProductStatsResponse struct {
+	TotalProducts      int64   `json:"total_products"`
+	TotalCategories    int64   `json:"total_categories"`
+	AveragePrice       float64 `json:"average_price"`
+	TotalValue         float64 `json:"total_value"`
+	LowStockProducts   int64   `json:"low_stock_products"`
+	OutOfStockProducts int64   `json:"out_of_stock_products"`
+}
+
+// CategoryResponse represents a category response
+type CategoryResponse struct {
+	Name         string  `json:"name"`
+	ProductCount int64   `json:"product_count"`
+	AveragePrice float64 `json:"average_price"`
+}
+
+// CategoriesResponse represents categories response
+type CategoriesResponse struct {
+	Categories []CategoryResponse `json:"categories"`
+	Count      int                `json:"count"`
+}
+
 // HealthResponse represents a health check response
 type HealthResponse struct {
 	Service   string `json:"service"`
