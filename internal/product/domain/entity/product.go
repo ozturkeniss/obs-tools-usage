@@ -34,43 +34,23 @@ type UpdateProductRequest struct {
 	Category    string  `json:"category"`
 }
 
-// ProductResponse represents the response payload for product operations
-type ProductResponse struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       float64   `json:"price"`
-	Stock       int       `json:"stock"`
-	Category    string    `json:"category"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-// ProductsResponse represents the response payload for multiple products
-type ProductsResponse struct {
-	Products []Product `json:"products"`
-	Count    int       `json:"count"`
-}
-
-
-// SuccessResponse represents a success response
-type SuccessResponse struct {
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-}
-
-// ToResponse converts a Product to ProductResponse
-func (p *Product) ToResponse() ProductResponse {
-	return ProductResponse{
-		ID:          p.ID,
-		Name:        p.Name,
-		Description: p.Description,
-		Price:       p.Price,
-		Stock:       p.Stock,
-		Category:    p.Category,
-		CreatedAt:   p.CreatedAt,
-		UpdatedAt:   p.UpdatedAt,
+// ToDTO converts a Product entity to a DTO-compatible struct
+func (p *Product) ToDTO() map[string]interface{} {
+	return map[string]interface{}{
+		"id":          p.ID,
+		"name":        p.Name,
+		"description": p.Description,
+		"price":       p.Price,
+		"stock":       p.Stock,
+		"category":    p.Category,
+		"created_at":  p.CreatedAt,
+		"updated_at":  p.UpdatedAt,
 	}
+}
+
+// ToResponse converts a Product to response format
+func (p *Product) ToResponse() interface{} {
+	return p.ToDTO()
 }
 
 // FromCreateRequest converts CreateProductRequest to Product
