@@ -4,7 +4,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -159,13 +158,13 @@ func getFileOutput() io.Writer {
 		return file
 	}
 	
-	// Configure log rotation
+	// Configure log rotation with default values
 	rotation := &lumberjack.Logger{
 		Filename:   logPath,
-		MaxSize:    getLogRotationMaxSize(),
-		MaxAge:     getLogRotationMaxAge(),
-		MaxBackups: getLogRotationMaxBackups(),
-		Compress:   getLogRotationCompress(),
+		MaxSize:    100, // 100 MB
+		MaxAge:     30,  // 30 days
+		MaxBackups: 10,  // 10 backup files
+		Compress:   true,
 		LocalTime:  true,
 	}
 	
@@ -186,38 +185,3 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-// getLogRotationMaxSize returns the maximum size for log rotation
-func getLogRotationMaxSize() int {
-	maxSizeStr := getEnv("LOG_MAX_SIZE", "100")
-	maxSize, err := strconv.Atoi(maxSizeStr)
-	if err != nil {
-		return 100 // Default 100 MB
-	}
-	return maxSize
-}
-
-// getLogRotationMaxAge returns the maximum age for log rotation
-func getLogRotationMaxAge() int {
-	maxAgeStr := getEnv("LOG_MAX_AGE", "30")
-	maxAge, err := strconv.Atoi(maxAgeStr)
-	if err != nil {
-		return 30 // Default 30 days
-	}
-	return maxAge
-}
-
-// getLogRotationMaxBackups returns the maximum number of backup files
-func getLogRotationMaxBackups() int {
-	maxBackupsStr := getEnv("LOG_MAX_BACKUPS", "10")
-	maxBackups, err := strconv.Atoi(maxBackupsStr)
-	if err != nil {
-		return 10 // Default 10 backup files
-	}
-	return maxBackups
-}
-
-// getLogRotationCompress returns whether to compress old log files
-func getLogRotationCompress() bool {
-	compressStr := getEnv("LOG_COMPRESS", "true")
-	return strings.ToLower(compressStr) == "true"
-}
