@@ -171,6 +171,8 @@ services:
       - HEALTH_CHECK_ENABLED=true
       - METRICS_ENABLED=true
     depends_on:
+      redis:
+        condition: service_healthy
       product-service:
         condition: service_started
       basket-service:
