@@ -76,7 +76,7 @@ while [[ $# -gt 0 ]]; do
             echo "  logs      Show service logs"
             echo ""
             echo "OPTIONS:"
-            echo "  --service SERVICE    Target specific service (product|basket|all)"
+            echo "  --service SERVICE    Target specific service (product|basket|payment|gateway|all)"
             echo "  -h, --help          Show this help message"
             exit 0
             ;;
