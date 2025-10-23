@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"obs-tools-usage/api/proto/basket"
-	"obs-toolsTS/internal/payment/domain/service"
+	"obs-tools-usage/internal/payment/domain/service"
 )
 
 // BasketClientImpl implements BasketClient interface using gRPC
@@ -119,7 +119,7 @@ func (c *BasketClientImpl) Ping(ctx context.Context) error {
 		return fmt.Errorf("basket service is not responding: %w", err)
 	}
 
-	if !resp.SuccessCompletion {
+	if !resp.Success {
 		return fmt.Errorf("basket service health check failed: %s", resp.Message)
 	}
 
