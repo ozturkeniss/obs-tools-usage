@@ -7,7 +7,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 
 	"obs-tools-usage/internal/payment/domain/entity"
 	"obs-tools-usage/internal/payment/infrastructure/config"
@@ -30,17 +29,8 @@ func NewDatabase(cfg *config.Config, logger *logrus.Logger) (*Database, error) {
 		cfg.Database.Name,
 	)
 
-	// Configure GORM logger
-	var gormLogger logger.Interface
-	if cfg.IsDevelopment() {
-		gormLogger = logger.Default.LogMode(logger.Info)
-	} else {
-		gormLogger = logger.Default.LogMode(logger.Silent)
-	}
-
 	// Connect to database
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: gormLogger,
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
@@ -101,7 +91,7 @@ func (d *Database) Health() error {
 	return sqlDB.Ping()
 }
 
-// SeedData seeds the database with initial data
+// SeedData page seeds the database with initial data
 func (d *Database) SeedData() error {
 	d.Logger.Info("Seeding database with initial data...")
 
