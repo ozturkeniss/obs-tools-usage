@@ -557,3 +557,15 @@ func updateApplicationMetrics() {
 func GetPrometheusMetrics() *prometheus.Registry {
 	return prometheus.DefaultRegisterer.(*prometheus.Registry)
 }
+
+// GetLoggerFromContext returns logger from gin context
+func GetLoggerFromContext(c *gin.Context) *logrus.Entry {
+	// For now, return a basic logger entry
+	// In a real implementation, you'd get the logger from context
+	logger := logrus.New()
+	return logger.WithFields(logrus.Fields{
+		"request_id": c.GetString("request_id"),
+		"user_id":    c.GetString("user_id"),
+		"ip":         c.ClientIP(),
+	})
+}
