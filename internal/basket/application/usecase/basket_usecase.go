@@ -277,3 +277,231 @@ func (uc *BasketUseCase) basketToResponse(basket *entity.Basket) *dto.BasketResp
 		ExpiresAt: basket.ExpiresAt,
 	}
 }
+
+// GetBasketItems retrieves basket items
+func (uc *BasketUseCase) GetBasketItems(userID string) ([]dto.BasketItemResponse, error) {
+	start := time.Now()
+	defer metrics.RecordRedisOperation("GetBasketItems", "success", time.Since(start))
+
+	basket, err := uc.basketRepo.GetBasket(userID)
+	if err != nil {
+		metrics.RecordRedisOperation("GetBasketItems", "error", time.Since(start))
+		return nil, fmt.Errorf("failed to get basket: %w", err)
+	}
+
+	var items []dto.BasketItemResponse
+	for _, item := range basket.Items {
+		items = append(items, dto.BasketItemResponse{
+			ProductID: item.ProductID,
+			Name:      item.Name,
+			Price:     item.Price,
+			Quantity:  item.Quantity,
+			Subtotal:  item.Subtotal,
+			Category:  item.Category,
+		})
+	}
+
+	return items, nil
+}
+
+// GetBasketTotal retrieves basket total
+func (uc *BasketUseCase) GetBasketTotal(userID string) (*dto.BasketTotalResponse, error) {
+	start := time.Now()
+	defer metrics.RecordRedisOperation("GetBasketTotal", "success", time.Since(start))
+
+	basket, err := uc.basketRepo.GetBasket(userID)
+	if err != nil {
+		metrics.RecordRedisOperation("GetBasketTotal", "error", time.Since(start))
+		return nil, fmt.Errorf("failed to get basket: %w", err)
+	}
+
+	return &dto.BasketTotalResponse{
+		UserID:    userID,
+		Total:     basket.Total,
+		ItemCount: basket.GetItemCount(),
+		Currency:  "USD",
+	}, nil
+}
+
+// GetBasketItemCount retrieves basket item count
+func (uc *BasketUseCase) GetBasketItemCount(userID string) (*dto.BasketItemCountResponse, error) {
+	start := time.Now()
+	defer metrics.RecordRedisOperation("GetBasketItemCount", "success", time.Since(start))
+
+	basket, err := uc.basketRepo.GetBasket(userID)
+	if err != nil {
+		metrics.RecordRedisOperation("GetBasketItemCount", "error", time.Since(start))
+		return nil, fmt.Errorf("failed to get basket: %w", err)
+	}
+
+	return &dto.BasketItemCountResponse{
+		UserID:     userID,
+		ItemCount:  basket.GetItemCount(),
+		UniqueItems: len(basket.Items),
+	}, nil
+}
+
+// GetBasketByCategory retrieves basket items by category
+func (uc *BasketUseCase) GetBasketByCategory(userID, category string) ([]dto.BasketItemResponse, error) {
+	start := time.Now()
+	defer metrics.RecordRedisOperation("GetBasketByCategory", "success", time.Since(start))
+
+	basket, err := uc.basketRepo.GetBasket(userID)
+	if err != nil {
+		metrics.RecordRedisOperation("GetBasketByCategory", "error", time.Since(start))
+		return nil, fmt.Errorf("failed to get basket: %w", err)
+	}
+
+	var items []dto.BasketItemResponse
+	for _, item := range basket.Items {
+		if item.Category == category {
+			items = append(items, dto.BasketItemResponse{
+				ProductID: item.ProductID,
+				Name:      item.Name,
+				Price:     item.Price,
+				Quantity:  item.Quantity,
+				Subtotal:  item.Subtotal,
+				Category:  item.Category,
+			})
+		}
+	}
+
+	return items, nil
+}
+
+// GetBasketStats retrieves basket statistics
+func (uc *BasketUseCase) GetBasketStats(userID string) (*dto.BasketStatsResponse, error) {
+	start := time.Now()
+	defer metrics.RecordRedisOperation("GetBasketStats", "success", time.Since(start))
+
+	basket, err := uc.basketRepo.GetBasket(userID)
+	if err != nil {
+		metrics.RecordRedisOperation("GetBasketStats", "error", time.Since(start))
+		return nil, fmt.Errorf("failed to get basket: %w", err)
+	}
+
+	totalItems := basket.GetItemCount()
+	uniqueItems := len(basket.Items)
+	
+	var totalValue float64
+	var mostExpensive, leastExpensive float64
+	categories := make(map[string]bool)
+	
+	if len(basket.Items) > 0 {
+		mostExpensive = basket.Items[0].Price
+		leastExpensive = basket.Items[0].Price
+	}
+
+	for _, item := range basket.Items {
+		totalValue += item.Subtotal
+		categories[item.Category] = true
+		
+		if item.Price > mostExpensive {
+			mostExpensive = item.Price
+		}
+		if item.Price < leastExpensive {
+			leastExpensive = item.Price
+		}
+	}
+
+	averageItemPrice := 0.0
+	if uniqueItems > 0 {
+		averageItemPrice = totalValue / float64(uniqueItems)
+	}
+
+	return &dto.BasketStatsResponse{
+		UserID:            userID,
+		TotalItems:        totalItems,
+		UniqueItems:       uniqueItems,
+		TotalValue:        totalValue,
+		AverageItemPrice:  averageItemPrice,
+		Categories:        len(categories),
+		MostExpensiveItem: mostExpensive,
+		LeastExpensiveItem: leastExpensive,
+	}, nil
+}
+
+// GetBasketExpiry retrieves basket expiry information
+func (uc *BasketUseCase) GetBasketExpiry(userID string) (*dto.BasketExpiryResponse, error) {
+	start := time.Now()
+	defer metrics.RecordRedisOperation("GetBasketExpiry", "success", time.Since(start))
+
+	basket, err := uc.basketRepo.GetBasket(userID)
+	if err != nil {
+		metrics.RecordRedisOperation("GetBasketExpiry", "error", time.Since(start))
+		return nil, fmt.Errorf("failed to get basket: %w", err)
+	}
+
+	now := time.Now()
+	isExpired := now.After(basket.ExpiresAt)
+	timeLeft := basket.ExpiresAt.Sub(now)
+
+	return &dto.BasketExpiryResponse{
+		UserID:    userID,
+		ExpiresAt: basket.ExpiresAt,
+		IsExpired: isExpired,
+		TimeLeft:  timeLeft.String(),
+	}, nil
+}
+
+// GetBasketHistory retrieves basket history (simplified)
+func (uc *BasketUseCase) GetBasketHistory(userID string) (*dto.BasketHistoryResponse, error) {
+	start := time.Now()
+	defer metrics.RecordRedisOperation("GetBasketHistory", "success", time.Since(start))
+
+	basket, err := uc.basketRepo.GetBasket(userID)
+	if err != nil {
+		metrics.RecordRedisOperation("GetBasketHistory", "error", time.Since(start))
+		return nil, fmt.Errorf("failed to get basket: %w", err)
+	}
+
+	var history []dto.BasketItemResponse
+	for _, item := range basket.Items {
+		history = append(history, dto.BasketItemResponse{
+			ProductID: item.ProductID,
+			Name:      item.Name,
+			Price:     item.Price,
+			Quantity:  item.Quantity,
+			Subtotal:  item.Subtotal,
+			Category:  item.Category,
+		})
+	}
+
+	return &dto.BasketHistoryResponse{
+		UserID:           userID,
+		History:          history,
+		TotalOperations:  len(history),
+	}, nil
+}
+
+// GetBasketRecommendations retrieves basket recommendations (simplified)
+func (uc *BasketUseCase) GetBasketRecommendations(userID string) (*dto.BasketRecommendationsResponse, error) {
+	start := time.Now()
+	defer metrics.RecordRedisOperation("GetBasketRecommendations", "success", time.Since(start))
+
+	// Simplified recommendations - in real implementation, this would use ML or business logic
+	recommendations := []dto.BasketItemResponse{
+		{
+			ProductID: 999,
+			Name:      "Recommended Product 1",
+			Price:     29.99,
+			Quantity:  1,
+			Subtotal:  29.99,
+			Category:  "Electronics",
+		},
+		{
+			ProductID: 998,
+			Name:      "Recommended Product 2",
+			Price:     19.99,
+			Quantity:  1,
+			Subtotal:  19.99,
+			Category:  "Accessories",
+		},
+	}
+
+	return &dto.BasketRecommendationsResponse{
+		UserID:         userID,
+		Recommendations: recommendations,
+		Reason:         "Based on your current basket items",
+	}, nil
+}
