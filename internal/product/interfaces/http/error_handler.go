@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"obs-tools-usage/internal/product/application/dto"
 )
 
 // ErrorResponse represents an error response
