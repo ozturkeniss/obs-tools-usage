@@ -32,6 +32,25 @@ services:
       retries: 5
     restart: unless-stopped
 
+  mariadb:
+    image: mariadb:10.11
+    container_name: payment-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: payment_service
+      MYSQL_USER: payment
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   product-service:
     build:
       context: .
@@ -83,6 +102,38 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  payment-service:
+    build:
+      context: .
+      dockerfile: dockerfiles/payment.dockerfile
+    container_name: payment-service
+    ports:
+      - "8082:8082"
+      - "50052:50052"
+    environment:
+      - ENVIRONMENT=development
+      - PORT=8082
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_USER=payment
+      - DB_PASSWORD=password
+      - DB_NAME=payment_service
+      - DB_SSL_MODE=false
+      - BASKET_SERVICE_URL=basket-service:50051
+      - PRODUCT_SERVICE_URL=product-service:50050
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=text
+      - LOG_OUTPUT=console
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      basket-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
+  mariadb_data:
