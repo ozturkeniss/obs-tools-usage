@@ -223,7 +223,7 @@ func (uc *PaymentUseCase) ProcessPayment(paymentID, providerID string) (*dto.Pay
 		Amount:    payment.Amount,
 		Currency:  payment.Currency,
 		Items:     uc.convertToPaymentItemEvents(items),
-		Metadata:  payment.Metadata,
+		Metadata:  uc.convertMetadata(payment.Metadata),
 	}
 
 	if err := uc.kafkaPublisher.PublishPaymentCompleted(ctx, paymentCompletedEvent); err != nil {
