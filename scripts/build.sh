@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🏗️  Building Product Service for Production..."
+echo "🏗️  Building Microservices for Production..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -67,33 +67,52 @@ else
 fi
 
 # Build for different platforms
-print_status "Building for Linux AMD64..."
+print_status "Building Product Service for Linux AMD64..."
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/product-service-linux-amd64 cmd/product/main.go
 
-print_status "Building for Linux ARM64..."
+print_status "Building Product Service for Linux ARM64..."
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/product-service-linux-arm64 cmd/product/main.go
 
-print_status "Building for Windows AMD64..."
+print_status "Building Product Service for Windows AMD64..."
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/product-service-windows-amd64.exe cmd/product/main.go
 
-print_status "Building for macOS AMD64..."
+print_status "Building Product Service for macOS AMD64..."
 GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/product-service-darwin-amd64 cmd/product/main.go
 
-print_status "Building for macOS ARM64..."
+print_status "Building Product Service for macOS ARM64..."
 GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/product-service-darwin-arm64 cmd/product/main.go
 
-# Create a symlink for the current platform
+print_status "Building Basket Service for Linux AMD64..."
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/basket-service-linux-amd64 cmd/basket/main.go
+
+print_status "Building Basket Service for Linux ARM64..."
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/basket-service-linux-arm64 cmd/basket/main.go
+
+print_status "Building Basket Service for Windows AMD64..."
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/basket-service-windows-amd64.exe cmd/basket/main.go
+
+print_status "Building Basket Service for macOS AMD64..."
+GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/basket-service-darwin-amd64 cmd/basket/main.go
+
+print_status "Building Basket Service for macOS ARM64..."
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/basket-service-darwin-arm64 cmd/basket/main.go
+
+# Create symlinks for the current platform
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if [[ $(uname -m) == "x86_64" ]]; then
         ln -sf product-service-linux-amd64 bin/product-service
+        ln -sf basket-service-linux-amd64 bin/basket-service
     elif [[ $(uname -m) == "aarch64" ]]; then
         ln -sf product-service-linux-arm64 bin/product-service
+        ln -sf basket-service-linux-arm64 bin/basket-service
     fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     if [[ $(uname -m) == "x86_64" ]]; then
         ln -sf product-service-darwin-amd64 bin/product-service
+        ln -sf basket-service-darwin-amd64 bin/basket-service
     elif [[ $(uname -m) == "arm64" ]]; then
         ln -sf product-service-darwin-arm64 bin/product-service
+        ln -sf basket-service-darwin-arm64 bin/basket-service
     fi
 fi
 
@@ -105,7 +124,7 @@ ls -la bin/
 
 # Show file sizes
 print_status "Binary sizes:"
-for file in bin/product-service-*; do
+for file in bin/*-service-*; do
     if [ -f "$file" ]; then
         size=$(du -h "$file" | cut -f1)
         echo "  $(basename "$file"): $size"
