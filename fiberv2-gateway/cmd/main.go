@@ -20,6 +20,9 @@ import (
 	"fiberv2-gateway/internal/health"
 	"fiberv2-gateway/internal/logging"
 	"fiberv2-gateway/internal/metrics"
+	"fiberv2-gateway/internal/ratelimiter"
+	"fiberv2-gateway/internal/redis"
+	"fiberv2-gateway/internal/middleware"
 )
 
 func main() {
@@ -28,6 +31,30 @@ func main() {
 	
 	// Setup logger
 	logger := logging.SetupLogger(cfg.LogLevel, cfg.LogFormat)
+	
+	// Setup Redis client
+	redisClient := redis.NewClient(redis.Config{
+		Host:         cfg.Redis.Host,
+		Port:         cfg.Redis.Port,
+		Password:     cfg.Redis.Password,
+		DB:           cfg.Redis.DB,
+		PoolSize:     cfg.Redis.PoolSize,
+		MinIdleConns: cfg.Redis.MinIdleConns,
+		MaxRetries:   cfg.Redis.MaxRetries,
+		DialTimeout:  cfg.Redis.DialTimeout,
+		ReadTimeout:  cfg.Redis.ReadTimeout,
+		WriteTimeout: cfg.Redis.WriteTimeout,
+	}, logger)
+	
+	// Test Redis connection
+	ctx := context.Background()
+	if err := redisClient.Ping(ctx); err != nil {
+		logger.WithError(err).Fatal("Failed to connect to Redis")
+	}
+	defer redisClient.Close()
+	
+	// Setup rate limiter
+	rateLimiter := ratelimiter.NewSlidingWindowRateLimiter(redisClient.GetClient(), logger)
 	
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -42,7 +69,7 @@ func main() {
 	})
 
 	// Setup middleware
-	setupMiddleware(app, logger)
+	setupMiddleware(app, logger, rateLimiter, cfg)
 
 	// Setup metrics
 	metrics.SetupMetrics(app)
