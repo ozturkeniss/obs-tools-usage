@@ -215,19 +215,54 @@ func (uc *PaymentUseCase) ProcessPayment(paymentID, providerID string) (*dto.Pay
 		return nil, fmt.Errorf("failed to update payment: %w", err)
 	}
 
-	// Update product stock
+	// Publish payment completed event
+	paymentCompletedEvent := &events.PaymentCompletedEvent{
+		PaymentID: payment.ID,
+		UserID:    payment.UserID,
+		BasketID:  payment.BasketID,
+		Amount:    payment.Amount,
+		Currency:  payment.Currency,
+		Items:     uc.convertToPaymentItemEvents(items),
+		Metadata:  payment.Metadata,
+	}
+
+	if err := uc.kafkaPublisher.PublishPaymentCompleted(ctx, paymentCompletedEvent); err != nil {
+		uc.logger.WithError(err).Error("Failed to publish payment completed event")
+	}
+
+	// Publish stock update events for each item
 	for _, item := range items {
-		if err := uc.productClient.UpdateProductStock(ctx, item.ProductID, item.Quantity); err != nil {
+		stockUpdateEvent := &events.StockUpdateEvent{
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+			Operation: "decrease",
+			Reason:    "Payment completed",
+			Metadata: map[string]interface{}{
+				"payment_id": payment.ID,
+				"user_id":    payment.UserID,
+			},
+		}
+
+		if err := uc.kafkaPublisher.PublishStockUpdate(ctx, stockUpdateEvent); err != nil {
 			uc.logger.WithError(err).WithFields(logrus.Fields{
 				"product_id": item.ProductID,
 				"quantity":   item.Quantity,
-			}).Error("Failed to update product stock")
+			}).Error("Failed to publish stock update event")
 		}
 	}
 
-	// Clear basket after successful payment
-	if err := uc.basketClient.ClearBasket(ctx, payment.UserID); err != nil {
-		uc.logger.WithError(err).Warn("Failed to clear basket after payment")
+	// Publish basket cleared event
+	basketClearedEvent := &events.BasketClearedEvent{
+		UserID:   payment.UserID,
+		BasketID: payment.BasketID,
+		Reason:   "Payment completed",
+		Metadata: map[string]interface{}{
+			"payment_id": payment.ID,
+		},
+	}
+
+	if err := uc.kafkaPublisher.PublishBasketCleared(ctx, basketClearedEvent); err != nil {
+		uc.logger.WithError(err).Error("Failed to publish basket cleared event")
 	}
 
 	response := uc.paymentToResponse(payment)
@@ -562,3 +597,20 @@ func (uc *PaymentUseCase) RetryPayment(paymentID string) (*dto.PaymentResponse, 
 	// Process the payment again
 	return uc.ProcessPayment(paymentID, "")
 }
+
+// convertToPaymentItemEvents converts entity.PaymentItem slice to events.PaymentItemEvent slice
+func (uc *PaymentUseCase) convertToPaymentItemEvents(items []*entity.PaymentItem) []events.PaymentItemEvent {
+	var eventItems []events.PaymentItemEvent
+	for _, item := range items {
+		eventItems = append(eventItems, events.PaymentItemEvent{
+			ProductID: item.ProductID,
+			Name:      item.Name,
+			Quantity:  item.Quantity,
+			Price:     item.Price,
+			Subtotal:  item.Subtotal,
+			Category:  item.Category,
+		})
+	}
+	return eventItems
+}
+
