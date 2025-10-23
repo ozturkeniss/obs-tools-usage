@@ -38,6 +38,7 @@ cd "$(dirname "$0")/.."
 print_status "Cleaning previous builds..."
 rm -rf bin/
 mkdir -p bin/
+mkdir -p fiberv2-gateway/bin/
 
 # Download dependencies
 print_status "Downloading dependencies..."
@@ -96,6 +97,38 @@ GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/basket-s
 
 print_status "Building Basket Service for macOS ARM64..."
 GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/basket-service-darwin-arm64 cmd/basket/main.go
+
+print_status "Building Payment Service for Linux AMD64..."
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/payment-service-linux-amd64 cmd/payment/main.go
+
+print_status "Building Payment Service for Linux ARM64..."
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/payment-service-linux-arm64 cmd/payment/main.go
+
+print_status "Building Payment Service for Windows AMD64..."
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/payment-service-windows-amd64.exe cmd/payment/main.go
+
+print_status "Building Payment Service for macOS AMD64..."
+GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/payment-service-darwin-amd64 cmd/payment/main.go
+
+print_status "Building Payment Service for macOS ARM64..."
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/payment-service-darwin-arm64 cmd/payment/main.go
+
+print_status "Building Gateway Service for Linux AMD64..."
+cd fiberv2-gateway
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/gateway-linux-amd64 cmd/main.go
+
+print_status "Building Gateway Service for Linux ARM64..."
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/gateway-linux-arm64 cmd/main.go
+
+print_status "Building Gateway Service for Windows AMD64..."
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/gateway-windows-amd64.exe cmd/main.go
+
+print_status "Building Gateway Service for macOS AMD64..."
+GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/gateway-darwin-amd64 cmd/main.go
+
+print_status "Building Gateway Service for macOS ARM64..."
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/gateway-darwin-arm64 cmd/main.go
+cd ..
 
 # Create symlinks for the current platform
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
