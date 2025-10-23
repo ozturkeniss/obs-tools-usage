@@ -10,7 +10,6 @@ import (
 	"obs-tools-usage/internal/product/application/dto"
 	"obs-tools-usage/internal/product/application/handler"
 	"obs-tools-usage/internal/product/application/query"
-	"obs-tools-usage/internal/product/infrastructure/config"
 )
 
 // Handler handles HTTP requests using CQRS pattern
@@ -41,7 +40,16 @@ func (h *Handler) GetAllProducts(c *gin.Context) {
 	}
 
 	for i, product := range products {
-		response.Products[i] = product.ToResponse()
+		response.Products[i] = dto.ProductResponse{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+			Stock:       product.Stock,
+			Category:    product.Category,
+			CreatedAt:   product.CreatedAt,
+			UpdatedAt:   product.UpdatedAt,
+		}
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -64,7 +72,16 @@ func (h *Handler) GetProductByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, product.ToResponse())
+	c.JSON(http.StatusOK, dto.ProductResponse{
+		ID:          product.ID,
+		Name:        product.Name,
+		Description: product.Description,
+		Price:       product.Price,
+		Stock:       product.Stock,
+		Category:    product.Category,
+		CreatedAt:   product.CreatedAt,
+		UpdatedAt:   product.UpdatedAt,
+	})
 }
 
 // CreateProduct handles POST /products
@@ -84,7 +101,16 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, product.ToResponse())
+	c.JSON(http.StatusCreated, dto.ProductResponse{
+		ID:          product.ID,
+		Name:        product.Name,
+		Description: product.Description,
+		Price:       product.Price,
+		Stock:       product.Stock,
+		Category:    product.Category,
+		CreatedAt:   product.CreatedAt,
+		UpdatedAt:   product.UpdatedAt,
+	})
 }
 
 // UpdateProduct handles PUT /products/:id
@@ -115,7 +141,16 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, product.ToResponse())
+	c.JSON(http.StatusOK, dto.ProductResponse{
+		ID:          product.ID,
+		Name:        product.Name,
+		Description: product.Description,
+		Price:       product.Price,
+		Stock:       product.Stock,
+		Category:    product.Category,
+		CreatedAt:   product.CreatedAt,
+		UpdatedAt:   product.UpdatedAt,
+	})
 }
 
 // DeleteProduct handles DELETE /products/:id
@@ -154,7 +189,16 @@ func (h *Handler) GetTop5MostExpensive(c *gin.Context) {
 	}
 
 	for i, product := range products {
-		response.Products[i] = product.ToResponse()
+		response.Products[i] = dto.ProductResponse{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+			Stock:       product.Stock,
+			Category:    product.Category,
+			CreatedAt:   product.CreatedAt,
+			UpdatedAt:   product.UpdatedAt,
+		}
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -174,7 +218,16 @@ func (h *Handler) GetTop10MostExpensive(c *gin.Context) {
 	}
 
 	for i, product := range products {
-		response.Products[i] = product.ToResponse()
+		response.Products[i] = dto.ProductResponse{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+			Stock:       product.Stock,
+			Category:    product.Category,
+			CreatedAt:   product.CreatedAt,
+			UpdatedAt:   product.UpdatedAt,
+		}
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -194,7 +247,16 @@ func (h *Handler) GetLowStockProducts1(c *gin.Context) {
 	}
 
 	for i, product := range products {
-		response.Products[i] = product.ToResponse()
+		response.Products[i] = dto.ProductResponse{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+			Stock:       product.Stock,
+			Category:    product.Category,
+			CreatedAt:   product.CreatedAt,
+			UpdatedAt:   product.UpdatedAt,
+		}
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -214,7 +276,16 @@ func (h *Handler) GetLowStockProducts10(c *gin.Context) {
 	}
 
 	for i, product := range products {
-		response.Products[i] = product.ToResponse()
+		response.Products[i] = dto.ProductResponse{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+			Stock:       product.Stock,
+			Category:    product.Category,
+			CreatedAt:   product.CreatedAt,
+			UpdatedAt:   product.UpdatedAt,
+		}
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -243,7 +314,16 @@ func (h *Handler) GetProductsByCategory(c *gin.Context) {
 	}
 
 	for i, product := range products {
-		response.Products[i] = product.ToResponse()
+		response.Products[i] = dto.ProductResponse{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+			Stock:       product.Stock,
+			Category:    product.Category,
+			CreatedAt:   product.CreatedAt,
+			UpdatedAt:   product.UpdatedAt,
+		}
 	}
 
 	c.JSON(http.StatusOK, response)
