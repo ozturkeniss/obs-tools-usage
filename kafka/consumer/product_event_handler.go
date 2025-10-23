@@ -2,7 +2,6 @@ package consumer
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/sirupsen/logrus"
 	"obs-tools-usage/kafka/events"
