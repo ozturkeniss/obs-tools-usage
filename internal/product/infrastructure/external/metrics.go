@@ -1,4 +1,4 @@
-package product
+package external
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/sirupsen/logrus"
+	"obs-tools-usage/internal/product/domain/entity"
 )
 
 // Prometheus metrics
@@ -389,7 +390,7 @@ func UpdateProductsTotal() {
 }
 
 // UpdateBusinessMetrics updates all business metrics
-func UpdateBusinessMetrics(products []Product) {
+func UpdateBusinessMetrics(products []entity.Product) {
 	// Reset category counters
 	productsByCategory.Reset()
 	
@@ -454,20 +455,20 @@ func UpdateBusinessMetrics(products []Product) {
 }
 
 // RecordProductStockLevel records individual product stock level
-func RecordProductStockLevel(product Product) {
+func RecordProductStockLevel(product entity.Product) {
 	stockLevels.WithLabelValues(product.Category).Observe(float64(product.Stock))
 	priceRanges.WithLabelValues(product.Category).Observe(product.Price)
 }
 
 // RecordLowStockAlert records low stock alert
-func RecordLowStockAlert(product Product) {
+func RecordLowStockAlert(product entity.Product) {
 	// This could be used for alerting when stock is low
 	// For now, we just record the metric
 	productsLowStock.Inc()
 }
 
 // RecordOutOfStockAlert records out of stock alert
-func RecordOutOfStockAlert(product Product) {
+func RecordOutOfStockAlert(product entity.Product) {
 	// This could be used for alerting when product is out of stock
 	productsOutOfStock.Inc()
 }
