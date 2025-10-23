@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 
 	"obs-tools-usage/internal/basket/application/handler"
 	"obs-tools-usage/internal/basket/application/usecase"
@@ -20,6 +22,7 @@ import (
 	"obs-tools-usage/internal/basket/infrastructure/metrics"
 	"obs-tools-usage/internal/basket/infrastructure/persistence"
 	httpInterface "obs-tools-usage/internal/basket/interfaces/http"
+	grpcInterface "obs-tools-usage/internal/basket/interfaces/grpc"
 )
 
 //go:generate wire
@@ -100,6 +103,24 @@ func main() {
 			logger.WithError(err).Fatal("Failed to start HTTP server")
 		}
 	}()
+
+	// Create gRPC server
+	grpcPort := "50051" // Basket service gRPC port
+	lis, err := net.Listen("tcp", ":"+grpcPort)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to listen on gRPC port")
+	}
+
+	grpcServer := grpc.NewServer()
+	grpcInterface.RegisterServer(grpcServer, commandHandler, queryHandler, logger)
+
+	// Start gRPC server in a goroutine
+	go func() {
+		logger.WithField("port", grpcPort).Info("Starting gRPC server")
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.WithError(err).Fatal("Failed to start gRPC server")
+		}
+	}()
 	
 	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
@@ -115,6 +136,10 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.WithError(err).Fatal("HTTP server forced to shutdown")
 	}
+
+	// Shutdown gRPC server
+	logger.Info("Shutting down gRPC server...")
+	grpcServer.GracefulStop()
 	
 	logger.Info("Server exited")
 }
