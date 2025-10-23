@@ -11,6 +11,8 @@ import (
 	"obs-tools-usage/internal/payment/domain/entity"
 	"obs-tools-usage/internal/payment/domain/repository"
 	"obs-tools-usage/internal/payment/domain/service"
+	"obs-tools-usage/kafka/events"
+	"obs-tools-usage/kafka/publisher"
 )
 
 // PaymentUseCase handles payment business logic
