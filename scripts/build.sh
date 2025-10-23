@@ -135,17 +135,25 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if [[ $(uname -m) == "x86_64" ]]; then
         ln -sf product-service-linux-amd64 bin/product-service
         ln -sf basket-service-linux-amd64 bin/basket-service
+        ln -sf payment-service-linux-amd64 bin/payment-service
+        ln -sf gateway-linux-amd64 fiberv2-gateway/bin/gateway
     elif [[ $(uname -m) == "aarch64" ]]; then
         ln -sf product-service-linux-arm64 bin/product-service
         ln -sf basket-service-linux-arm64 bin/basket-service
+        ln -sf payment-service-linux-arm64 bin/payment-service
+        ln -sf gateway-linux-arm64 fiberv2-gateway/bin/gateway
     fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     if [[ $(uname -m) == "x86_64" ]]; then
         ln -sf product-service-darwin-amd64 bin/product-service
         ln -sf basket-service-darwin-amd64 bin/basket-service
+        ln -sf payment-service-darwin-amd64 bin/payment-service
+        ln -sf gateway-darwin-amd64 fiberv2-gateway/bin/gateway
     elif [[ $(uname -m) == "arm64" ]]; then
         ln -sf product-service-darwin-arm64 bin/product-service
         ln -sf basket-service-darwin-arm64 bin/basket-service
+        ln -sf payment-service-darwin-arm64 bin/payment-service
+        ln -sf gateway-darwin-arm64 fiberv2-gateway/bin/gateway
     fi
 fi
 
