@@ -120,7 +120,7 @@ func main() {
 }
 
 // startCleanupRoutine starts a background routine to clean up expired baskets
-func startCleanupRoutine(repo persistence.BasketRepository, logger *logrus.Logger) {
+func startCleanupRoutine(repo interface{}, logger *logrus.Logger) {
 	ticker := time.NewTicker(1 * time.Hour) // Run every hour
 	defer ticker.Stop()
 	
