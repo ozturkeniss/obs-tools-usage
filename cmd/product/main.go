@@ -55,9 +55,6 @@ func main() {
 	commandHandler := handler.NewCommandHandler(productUseCase)
 	queryHandler := handler.NewQueryHandler(productUseCase)
 	
-	// Initialize HTTP handler
-	httpHandler := httpInterface.NewHandler(commandHandler, queryHandler)
-	
 	// Initialize gRPC server
 	grpcServer := grpc.NewGRPCServer(commandHandler, queryHandler, productRepo)
 	
