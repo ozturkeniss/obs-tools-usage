@@ -4,7 +4,7 @@
 graph TB
     subgraph "Services"
         Product[🛍️ Product Service<br/>:8080 HTTP<br/>:50050 gRPC]
-        Basket[🛒 Basket Service<br/>:8081 HTTP]
+        Basket[🛒 Basket Service<br/>:8081 HTTP<br/>:50051 gRPC]
     end
     
     subgraph "Data Storage"
@@ -116,11 +116,13 @@ graph TB
 graph TB
     subgraph "External Layer"
         HTTP[HTTP API<br/>Port 8081]
+        GRPC[gRPC API<br/>Port 50051]
         Redis[(Redis<br/>Port 6379)]
     end
     
     subgraph "Interface Layer"
         HTTPHandler[HTTP Handlers]
+        GRPCHandler[gRPC Handlers]
         Middleware[Middleware<br/>CORS, Logging, Metrics]
     end
     
@@ -146,10 +148,14 @@ graph TB
     end
     
     HTTP --> HTTPHandler
+    GRPC --> GRPCHandler
     HTTPHandler --> Middleware
+    GRPCHandler --> Middleware
     
     HTTPHandler --> CommandHandler
     HTTPHandler --> QueryHandler
+    GRPCHandler --> CommandHandler
+    GRPCHandler --> QueryHandler
     
     CommandHandler --> UseCase
     QueryHandler --> UseCase
@@ -209,7 +215,7 @@ go build -o bin/basket-service cmd/basket/main.go
 | Service | Port | Description |
 |---------|------|-------------|
 | `product-service` | `8080`, `50050` | Product management service |
-| `basket-service` | `8081` | Shopping basket service |
+| `basket-service` | `8081`, `50051` | Shopping basket service |
 | `postgres` | `5432` | PostgreSQL database |
 | `redis` | `6379` | Redis cache |
 
