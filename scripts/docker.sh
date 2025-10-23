@@ -119,6 +119,28 @@ case $ACTION in
             exit 1
         fi
         
+        # Build payment service image
+        print_status "Building payment service image..."
+        docker build -f dockerfiles/payment.dockerfile -t payment-service:$TAG .
+        
+        if [ $? -eq 0 ]; then
+            print_success "Payment service image built successfully!"
+        else
+            print_error "Failed to build payment service image!"
+            exit 1
+        fi
+        
+        # Build gateway service image
+        print_status "Building gateway service image..."
+        docker build -f dockerfiles/gateway.dockerfile -t gateway:$TAG .
+        
+        if [ $? -eq 0 ]; then
+            print_success "Gateway service image built successfully!"
+        else
+            print_error "Failed to build gateway service image!"
+            exit 1
+        fi
+        
         # Build all services with docker-compose
         print_status "Building all services with docker-compose..."
         docker-compose build
@@ -132,12 +154,14 @@ case $ACTION in
         
         # Show built images
         print_status "Built images:"
-        docker images | grep -E "(product-service|basket-service|postgres|redis)"
+        docker images | grep -E "(product-service|basket-service|payment-service|gateway|postgres|redis|mariadb|kafka|zookeeper)"
         
         if [ "$PUSH" = true ]; then
             print_status "Pushing images to registry..."
             docker push product-service:$TAG
             docker push basket-service:$TAG
+            docker push payment-service:$TAG
+            docker push gateway:$TAG
         fi
         ;;
         
@@ -151,16 +175,35 @@ case $ACTION in
             docker-compose ps
             echo ""
             print_status "Access points:"
-            print_status "  Product Service HTTP API: http://localhost:8080"
-            print_status "  Product Service gRPC API: localhost:50050"
-            print_status "  Basket Service HTTP API: http://localhost:8081"
-            print_status "  Basket Service gRPC API: localhost:50051"
-            print_status "  PostgreSQL: localhost:5432"
-            print_status "  Redis: localhost:6379"
-            print_status "  Product Health Check: http://localhost:8080/health"
-            print_status "  Basket Health Check: http://localhost:8081/health"
-            print_status "  Product Metrics: http://localhost:8080/metrics"
-            print_status "  Basket Metrics: http://localhost:8081/metrics"
+            print_status "  🌐 FiberV2 Gateway: http://localhost:8083"
+            print_status "  📊 Gateway Admin: http://localhost:8083/admin"
+            print_status "  ❤️  Gateway Health: http://localhost:8083/health"
+            print_status "  📈 Gateway Metrics: http://localhost:8083/metrics"
+            print_status ""
+            print_status "  🛍️  Product Service HTTP API: http://localhost:8080"
+            print_status "  🛒 Basket Service HTTP API: http://localhost:8081"
+            print_status "  💳 Payment Service HTTP API: http://localhost:8082"
+            print_status ""
+            print_status "  🛍️  Product Service gRPC API: localhost:50050"
+            print_status "  🛒 Basket Service gRPC API: localhost:50051"
+            print_status "  💳 Payment Service gRPC API: localhost:50052"
+            print_status ""
+            print_status "  🗄️  PostgreSQL: localhost:5432"
+            print_status "  🔴 Redis: localhost:6379"
+            print_status "  🗄️  MariaDB: localhost:3306"
+            print_status "  📨 Kafka: localhost:9092"
+            print_status ""
+            print_status "  ❤️  Health Checks:"
+            print_status "    Product Health: http://localhost:8080/health"
+            print_status "    Basket Health: http://localhost:8081/health"
+            print_status "    Payment Health: http://localhost:8082/health"
+            print_status "    Gateway Health: http://localhost:8083/health"
+            print_status ""
+            print_status "  📈 Metrics:"
+            print_status "    Product Metrics: http://localhost:8080/metrics"
+            print_status "    Basket Metrics: http://localhost:8081/metrics"
+            print_status "    Payment Metrics: http://localhost:8082/metrics"
+            print_status "    Gateway Metrics: http://localhost:8083/metrics"
         else
             print_error "Failed to start services!"
             exit 1
@@ -188,6 +231,8 @@ case $ACTION in
         # Remove service images
         docker rmi $(docker images "product-service*" -q) 2>/dev/null || true
         docker rmi $(docker images "basket-service*" -q) 2>/dev/null || true
+        docker rmi $(docker images "payment-service*" -q) 2>/dev/null || true
+        docker rmi $(docker images "gateway*" -q) 2>/dev/null || true
         
         # Clean up unused resources
         docker system prune -f
@@ -201,10 +246,17 @@ case $ACTION in
         # Tag and push services
         docker tag product-service:$TAG product-service:latest
         docker tag basket-service:$TAG basket-service:latest
+        docker tag payment-service:$TAG payment-service:latest
+        docker tag gateway:$TAG gateway:latest
+        
         docker push product-service:$TAG
         docker push product-service:latest
         docker push basket-service:$TAG
         docker push basket-service:latest
+        docker push payment-service:$TAG
+        docker push payment-service:latest
+        docker push gateway:$TAG
+        docker push gateway:latest
         
         print_success "Images pushed successfully!"
         ;;
