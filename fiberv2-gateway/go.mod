@@ -3,8 +3,8 @@ module fiberv2-gateway
 go 1.22
 
 require (
-	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/prometheus/client_golang v1.19.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sony/gobreaker v0.5.0
@@ -17,6 +17,7 @@ require (
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
