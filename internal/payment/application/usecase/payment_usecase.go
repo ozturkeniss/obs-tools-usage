@@ -20,16 +20,18 @@ type PaymentUseCase struct {
 	paymentRepo   repository.PaymentRepository
 	basketClient  service.BasketClient
 	productClient service.ProductClient
+	kafkaPublisher *publisher.PaymentPublisher
 	logger        *logrus.Logger
 }
 
 // NewPaymentUseCase creates a new payment use case
-func NewPaymentUseCase(paymentRepo repository.PaymentRepository, basketClient service.BasketClient, productClient service.ProductClient, logger *logrus.Logger) *PaymentUseCase {
+func NewPaymentUseCase(paymentRepo repository.PaymentRepository, basketClient service.BasketClient, productClient service.ProductClient, kafkaPublisher *publisher.PaymentPublisher, logger *logrus.Logger) *PaymentUseCase {
 	return &PaymentUseCase{
-		paymentRepo:   paymentRepo,
-		basketClient:  basketClient,
-		productClient: productClient,
-		logger:        logger,
+		paymentRepo:    paymentRepo,
+		basketClient:   basketClient,
+		productClient:  productClient,
+		kafkaPublisher: kafkaPublisher,
+		logger:         logger,
 	}
 }
 
