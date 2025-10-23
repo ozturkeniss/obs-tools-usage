@@ -84,7 +84,7 @@ func main() {
 	startServer(app, cfg, logger)
 }
 
-func setupMiddleware(app *fiber.App, logger *logrus.Logger) {
+func setupMiddleware(app *fiber.App, logger *logrus.Logger, rateLimiter *ratelimiter.SlidingWindowRateLimiter, cfg *config.Config) {
 	// Recovery middleware
 	app.Use(recover.New())
 
@@ -92,7 +92,7 @@ func setupMiddleware(app *fiber.App, logger *logrus.Logger) {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders: "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders: "Origin,Content-Type,Accept,Authorization,X-Request-ID,X-User-ID",
 	}))
 
 	// Logger middleware
@@ -110,6 +110,44 @@ func setupMiddleware(app *fiber.App, logger *logrus.Logger) {
 		c.Locals("requestID", requestID)
 		return c.Next()
 	})
+
+	// Rate limiting middleware
+	if cfg.RateLimit.Enabled {
+		rateLimitConfig := ratelimiter.RateLimitConfig{
+			WindowSize:  cfg.RateLimit.Window,
+			MaxRequests: cfg.RateLimit.Requests,
+			KeyPrefix:   "gateway:rate_limit",
+		}
+		
+		// Apply different rate limits based on endpoint
+		rateLimitConfigs := map[string]ratelimiter.RateLimitConfig{
+			"api": {
+				WindowSize:  cfg.RateLimit.Window,
+				MaxRequests: cfg.RateLimit.Requests,
+				KeyPrefix:   "gateway:api:rate_limit",
+			},
+			"admin": {
+				WindowSize:  time.Minute,
+				MaxRequests: 50,
+				KeyPrefix:   "gateway:admin:rate_limit",
+			},
+			"health": {
+				WindowSize:  time.Minute,
+				MaxRequests: 200,
+				KeyPrefix:   "gateway:health:rate_limit",
+			},
+			"default": rateLimitConfig,
+		}
+		
+		// Use adaptive rate limiting
+		app.Use(middleware.AdaptiveRateLimitMiddleware(rateLimiter, rateLimitConfigs, logger))
+	}
+
+	// Security middleware
+	app.Use(middleware.SecurityMiddleware())
+	
+	// Timeout middleware
+	app.Use(middleware.TimeoutMiddleware(30 * time.Second))
 }
 
 func startServer(app *fiber.App, cfg *config.Config, logger *logrus.Logger) {
