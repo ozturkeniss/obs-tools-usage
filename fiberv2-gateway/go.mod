@@ -4,6 +4,7 @@ go 1.22
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.5
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/prometheus/client_golang v1.19.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sony/gobreaker v0.5.0
