@@ -108,6 +108,17 @@ case $ACTION in
             exit 1
         fi
         
+        # Build basket service image
+        print_status "Building basket service image..."
+        docker build -f dockerfiles/basket.dockerfile -t basket-service:$TAG .
+        
+        if [ $? -eq 0 ]; then
+            print_success "Basket service image built successfully!"
+        else
+            print_error "Failed to build basket service image!"
+            exit 1
+        fi
+        
         # Build all services with docker-compose
         print_status "Building all services with docker-compose..."
         docker-compose build
@@ -121,11 +132,12 @@ case $ACTION in
         
         # Show built images
         print_status "Built images:"
-        docker images | grep -E "(product-service|postgres)"
+        docker images | grep -E "(product-service|basket-service|postgres|redis)"
         
         if [ "$PUSH" = true ]; then
             print_status "Pushing images to registry..."
             docker push product-service:$TAG
+            docker push basket-service:$TAG
         fi
         ;;
         
@@ -139,11 +151,16 @@ case $ACTION in
             docker-compose ps
             echo ""
             print_status "Access points:"
-            print_status "  HTTP API: http://localhost:8080"
-            print_status "  gRPC API: localhost:50050"
+            print_status "  Product Service HTTP API: http://localhost:8080"
+            print_status "  Product Service gRPC API: localhost:50050"
+            print_status "  Basket Service HTTP API: http://localhost:8081"
+            print_status "  Basket Service gRPC API: localhost:50051"
             print_status "  PostgreSQL: localhost:5432"
-            print_status "  Health Check: http://localhost:8080/health"
-            print_status "  Metrics: http://localhost:8080/metrics"
+            print_status "  Redis: localhost:6379"
+            print_status "  Product Health Check: http://localhost:8080/health"
+            print_status "  Basket Health Check: http://localhost:8081/health"
+            print_status "  Product Metrics: http://localhost:8080/metrics"
+            print_status "  Basket Metrics: http://localhost:8081/metrics"
         else
             print_error "Failed to start services!"
             exit 1
@@ -168,8 +185,9 @@ case $ACTION in
         # Stop and remove containers
         docker-compose down --volumes --rmi all
         
-        # Remove product service images
+        # Remove service images
         docker rmi $(docker images "product-service*" -q) 2>/dev/null || true
+        docker rmi $(docker images "basket-service*" -q) 2>/dev/null || true
         
         # Clean up unused resources
         docker system prune -f
@@ -180,10 +198,13 @@ case $ACTION in
     push)
         print_status "Pushing images to registry..."
         
-        # Tag and push product service
+        # Tag and push services
         docker tag product-service:$TAG product-service:latest
+        docker tag basket-service:$TAG basket-service:latest
         docker push product-service:$TAG
         docker push product-service:latest
+        docker push basket-service:$TAG
+        docker push basket-service:latest
         
         print_success "Images pushed successfully!"
         ;;
