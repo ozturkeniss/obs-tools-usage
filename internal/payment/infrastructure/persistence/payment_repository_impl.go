@@ -304,29 +304,29 @@ func (r *PaymentRepositoryImpl) Ping() error {
 }
 
 // GetPaymentsByAmountRange retrieves payments by amount range
-func (r *MariaDBPaymentRepository) GetPaymentsByAmountRange(minAmount, maxAmount float64) ([]*entity.Payment, error) {
+func (r *PaymentRepositoryImpl) GetPaymentsByAmountRange(minAmount, maxAmount float64) ([]*entity.Payment, error) {
 	var payments []*entity.Payment
 	err := r.db.Where("amount >= ? AND amount <= ?", minAmount, maxAmount).Find(&payments).Error
 	return payments, err
 }
 
 // GetPaymentsByMethod retrieves payments by method
-func (r *MariaDBPaymentRepository) GetPaymentsByMethod(method string) ([]*entity.Payment, error) {
+func (r *PaymentRepositoryImpl) GetPaymentsByMethod(method string) ([]*entity.Payment, error) {
 	var payments []*entity.Payment
 	err := r.db.Where("method = ?", method).Find(&payments).Error
 	return payments, err
 }
 
 // GetPaymentsByProvider retrieves payments by provider
-func (r *MariaDBPaymentRepository) GetPaymentsByProvider(provider string) ([]*entity.Payment, error) {
+func (r *PaymentRepositoryImpl) GetPaymentsByProvider(provider string) ([]*entity.Payment, error) {
 	var payments []*entity.Payment
 	err := r.db.Where("provider = ?", provider).Find(&payments).Error
 	return payments, err
 }
 
 // GetPaymentAnalytics retrieves payment analytics
-func (r *MariaDBPaymentRepository) GetPaymentAnalytics() (*PaymentAnalytics, error) {
-	var analytics PaymentAnalytics
+func (r *PaymentRepositoryImpl) GetPaymentAnalytics() (*repository.PaymentAnalytics, error) {
+	var analytics repository.PaymentAnalytics
 	
 	// Total payments
 	r.db.Model(&entity.Payment{}).Count(&analytics.TotalPayments)
@@ -365,22 +365,22 @@ func (r *MariaDBPaymentRepository) GetPaymentAnalytics() (*PaymentAnalytics, err
 }
 
 // GetPaymentMethods retrieves available payment methods
-func (r *MariaDBPaymentRepository) GetPaymentMethods() ([]string, error) {
+func (r *PaymentRepositoryImpl) GetPaymentMethods() ([]string, error) {
 	var methods []string
 	err := r.db.Model(&entity.Payment{}).Distinct("method").Pluck("method", &methods).Error
 	return methods, err
 }
 
 // GetPaymentProviders retrieves available payment providers
-func (r *MariaDBPaymentRepository) GetPaymentProviders() ([]string, error) {
+func (r *PaymentRepositoryImpl) GetPaymentProviders() ([]string, error) {
 	var providers []string
 	err := r.db.Model(&entity.Payment{}).Distinct("provider").Pluck("provider", &providers).Error
 	return providers, err
 }
 
 // GetPaymentSummary retrieves payment summary
-func (r *MariaDBPaymentRepository) GetPaymentSummary() (*PaymentSummary, error) {
-	var summary PaymentSummary
+func (r *PaymentRepositoryImpl) GetPaymentSummary() (*repository.PaymentSummary, error) {
+	var summary repository.PaymentSummary
 	
 	// Total payments
 	r.db.Model(&entity.Payment{}).Count(&summary.TotalPayments)
