@@ -155,8 +155,35 @@ setup: install-deps mod-tidy proto
 # Run the application
 .PHONY: run
 run: build
-	@echo "Running product service..."
-	@./bin/product-service
+	@echo "Running microservices..."
+	@chmod +x scripts/services.sh
+	@./scripts/services.sh start --service all
+
+# Services management
+.PHONY: services-start
+services-start:
+	@chmod +x scripts/services.sh
+	@./scripts/services.sh start
+
+.PHONY: services-stop
+services-stop:
+	@chmod +x scripts/services.sh
+	@./scripts/services.sh stop
+
+.PHONY: services-restart
+services-restart:
+	@chmod +x scripts/services.sh
+	@./scripts/services.sh restart
+
+.PHONY: services-status
+services-status:
+	@chmod +x scripts/services.sh
+	@./scripts/services.sh status
+
+.PHONY: services-logs
+services-logs:
+	@chmod +x scripts/services.sh
+	@./scripts/services.sh logs
 
 # Help
 .PHONY: help
@@ -165,7 +192,7 @@ help:
 	@echo "  setup          - Setup project (install deps, generate proto)"
 	@echo "  dev            - Start development server"
 	@echo "  build          - Build the application"
-	@echo "  run            - Run the application"
+	@echo "  run            - Run microservices"
 	@echo "  test           - Run tests"
 	@echo "  test-coverage  - Run tests with coverage"
 	@echo "  lint           - Run linter and format checks"
@@ -173,6 +200,13 @@ help:
 	@echo "  proto          - Generate protobuf files"
 	@echo "  mod-tidy       - Tidy go modules"
 	@echo "  install-deps   - Install development dependencies"
+	@echo ""
+	@echo "Services management:"
+	@echo "  services-start    - Start services"
+	@echo "  services-stop     - Stop services"
+	@echo "  services-restart  - Restart services"
+	@echo "  services-status   - Show service status"
+	@echo "  services-logs     - Show service logs"
 	@echo ""
 	@echo "Database targets:"
 	@echo "  db-migrate     - Run database migrations"
