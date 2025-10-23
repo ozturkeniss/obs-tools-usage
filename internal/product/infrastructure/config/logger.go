@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -175,4 +176,48 @@ func getFileOutput() io.Writer {
 // GetLogger returns the configured logger instance
 func GetLogger() *logrus.Logger {
 	return Logger
+}
+
+// getEnv gets an environment variable with a default value
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// getLogRotationMaxSize returns the maximum size for log rotation
+func getLogRotationMaxSize() int {
+	maxSizeStr := getEnv("LOG_MAX_SIZE", "100")
+	maxSize, err := strconv.Atoi(maxSizeStr)
+	if err != nil {
+		return 100 // Default 100 MB
+	}
+	return maxSize
+}
+
+// getLogRotationMaxAge returns the maximum age for log rotation
+func getLogRotationMaxAge() int {
+	maxAgeStr := getEnv("LOG_MAX_AGE", "30")
+	maxAge, err := strconv.Atoi(maxAgeStr)
+	if err != nil {
+		return 30 // Default 30 days
+	}
+	return maxAge
+}
+
+// getLogRotationMaxBackups returns the maximum number of backup files
+func getLogRotationMaxBackups() int {
+	maxBackupsStr := getEnv("LOG_MAX_BACKUPS", "10")
+	maxBackups, err := strconv.Atoi(maxBackupsStr)
+	if err != nil {
+		return 10 // Default 10 backup files
+	}
+	return maxBackups
+}
+
+// getLogRotationCompress returns whether to compress old log files
+func getLogRotationCompress() bool {
+	compressStr := getEnv("LOG_COMPRESS", "true")
+	return strings.ToLower(compressStr) == "true"
 }
