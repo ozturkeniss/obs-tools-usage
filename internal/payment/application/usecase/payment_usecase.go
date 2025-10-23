@@ -347,3 +347,214 @@ func (uc *PaymentUseCase) itemsToResponse(items []*entity.PaymentItem) []dto.Pay
 	}
 	return responses
 }
+
+// GetPaymentsByStatus retrieves payments by status
+func (uc *PaymentUseCase) GetPaymentsByStatus(status string) ([]*dto.PaymentResponse, error) {
+	payments, err := uc.paymentRepo.GetPaymentsByStatus(status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payments by status: %w", err)
+	}
+
+	var responses []*dto.PaymentResponse
+	for _, payment := range payments {
+		items, _ := uc.paymentRepo.GetPaymentItems(payment.ID)
+		response := uc.paymentToResponse(payment)
+		response.Items = uc.itemsToResponse(items)
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+// GetPaymentsByDateRange retrieves payments by date range
+func (uc *PaymentUseCase) GetPaymentsByDateRange(startDate, endDate string) ([]*dto.PaymentResponse, error) {
+	payments, err := uc.paymentRepo.GetPaymentsByDateRange(startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payments by date range: %w", err)
+	}
+
+	var responses []*dto.PaymentResponse
+	for _, payment := range payments {
+		items, _ := uc.paymentRepo.GetPaymentItems(payment.ID)
+		response := uc.paymentToResponse(payment)
+		response.Items = uc.itemsToResponse(items)
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+// GetPaymentsByAmountRange retrieves payments by amount range
+func (uc *PaymentUseCase) GetPaymentsByAmountRange(minAmount, maxAmount float64) ([]*dto.PaymentResponse, error) {
+	payments, err := uc.paymentRepo.GetPaymentsByAmountRange(minAmount, maxAmount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payments by amount range: %w", err)
+	}
+
+	var responses []*dto.PaymentResponse
+	for _, payment := range payments {
+		items, _ := uc.paymentRepo.GetPaymentItems(payment.ID)
+		response := uc.paymentToResponse(payment)
+		response.Items = uc.itemsToResponse(items)
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+// GetPaymentsByMethod retrieves payments by method
+func (uc *PaymentUseCase) GetPaymentsByMethod(method string) ([]*dto.PaymentResponse, error) {
+	payments, err := uc.paymentRepo.GetPaymentsByMethod(method)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payments by method: %w", err)
+	}
+
+	var responses []*dto.PaymentResponse
+	for _, payment := range payments {
+		items, _ := uc.paymentRepo.GetPaymentItems(payment.ID)
+		response := uc.paymentToResponse(payment)
+		response.Items = uc.itemsToResponse(items)
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+// GetPaymentsByProvider retrieves payments by provider
+func (uc *PaymentUseCase) GetPaymentsByProvider(provider string) ([]*dto.PaymentResponse, error) {
+	payments, err := uc.paymentRepo.GetPaymentsByProvider(provider)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payments by provider: %w", err)
+	}
+
+	var responses []*dto.PaymentResponse
+	for _, payment := range payments {
+		items, _ := uc.paymentRepo.GetPaymentItems(payment.ID)
+		response := uc.paymentToResponse(payment)
+		response.Items = uc.itemsToResponse(items)
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+// GetPaymentItems retrieves payment items
+func (uc *PaymentUseCase) GetPaymentItems(paymentID string) ([]dto.PaymentItemResponse, error) {
+	items, err := uc.paymentRepo.GetPaymentItems(paymentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payment items: %w", err)
+	}
+
+	return uc.itemsToResponse(items), nil
+}
+
+// GetPaymentAnalytics retrieves payment analytics
+func (uc *PaymentUseCase) GetPaymentAnalytics() (*dto.PaymentAnalyticsResponse, error) {
+	analytics, err := uc.paymentRepo.GetPaymentAnalytics()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payment analytics: %w", err)
+	}
+
+	return &dto.PaymentAnalyticsResponse{
+		TotalPayments:     analytics.TotalPayments,
+		TotalRevenue:      analytics.TotalRevenue,
+		SuccessRate:       analytics.SuccessRate,
+		AverageAmount:     analytics.AverageAmount,
+		TopPaymentMethod:  analytics.TopPaymentMethod,
+		TopProvider:       analytics.TopProvider,
+		DailyTransactions: analytics.DailyTransactions,
+		MonthlyRevenue:    analytics.MonthlyRevenue,
+	}, nil
+}
+
+// GetPaymentMethods retrieves available payment methods
+func (uc *PaymentUseCase) GetPaymentMethods() (*dto.PaymentMethodsResponse, error) {
+	methods, err := uc.paymentRepo.GetPaymentMethods()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payment methods: %w", err)
+	}
+
+	return &dto.PaymentMethodsResponse{
+		Methods: methods,
+		Count:   len(methods),
+	}, nil
+}
+
+// GetPaymentProviders retrieves available payment providers
+func (uc *PaymentUseCase) GetPaymentProviders() (*dto.PaymentProvidersResponse, error) {
+	providers, err := uc.paymentRepo.GetPaymentProviders()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payment providers: %w", err)
+	}
+
+	return &dto.PaymentProvidersResponse{
+		Providers: providers,
+		Count:     len(providers),
+	}, nil
+}
+
+// GetPaymentSummary retrieves payment summary
+func (uc *PaymentUseCase) GetPaymentSummary() (*dto.PaymentSummaryResponse, error) {
+	summary, err := uc.paymentRepo.GetPaymentSummary()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payment summary: %w", err)
+	}
+
+	return &dto.PaymentSummaryResponse{
+		TotalPayments:     summary.TotalPayments,
+		TotalRevenue:      summary.TotalRevenue,
+		PendingPayments:   summary.PendingPayments,
+		CompletedPayments: summary.CompletedPayments,
+		FailedPayments:    summary.FailedPayments,
+		RefundedPayments:  summary.RefundedPayments,
+		SuccessRate:       summary.SuccessRate,
+		AverageAmount:     summary.AverageAmount,
+	}, nil
+}
+
+// CancelPayment cancels a payment
+func (uc *PaymentUseCase) CancelPayment(paymentID string) (*dto.PaymentResponse, error) {
+	payment, err := uc.paymentRepo.GetPayment(paymentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payment: %w", err)
+	}
+
+	if !payment.CanBeCancelled() {
+		return nil, fmt.Errorf("payment cannot be cancelled, current status: %s", payment.Status)
+	}
+
+	payment.MarkAsCancelled()
+	if err := uc.paymentRepo.UpdatePayment(payment); err != nil {
+		return nil, fmt.Errorf("failed to update payment: %w", err)
+	}
+
+	response := uc.paymentToResponse(payment)
+	
+	uc.logger.WithFields(logrus.Fields{
+		"payment_id": paymentID,
+		"user_id":    payment.UserID,
+	}).Info("Payment cancelled successfully")
+
+	return response, nil
+}
+
+// RetryPayment retries a failed payment
+func (uc *PaymentUseCase) RetryPayment(paymentID string) (*dto.PaymentResponse, error) {
+	payment, err := uc.paymentRepo.GetPayment(paymentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payment: %w", err)
+	}
+
+	if !payment.CanBeRetried() {
+		return nil, fmt.Errorf("payment cannot be retried, current status: %s", payment.Status)
+	}
+
+	// Reset to pending status for retry
+	payment.MarkAsPending()
+	if err := uc.paymentRepo.UpdatePayment(payment); err != nil {
+		return nil, fmt.Errorf("failed to update payment: %w", err)
+	}
+
+	// Process the payment again
+	return uc.ProcessPayment(paymentID)
+}
