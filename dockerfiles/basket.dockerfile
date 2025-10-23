@@ -28,8 +28,8 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/bin/basket-service .
 
-# Expose port
-EXPOSE 8081
+# Expose ports
+EXPOSE 8081 50051
 
 # Run the binary
 CMD ["./basket-service"]
