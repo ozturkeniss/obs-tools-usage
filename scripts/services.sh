@@ -292,6 +292,30 @@ stop_services() {
                 rm -f logs/basket-service.pid
             fi
             ;;
+        payment|all)
+            if [ -f "logs/payment-service.pid" ]; then
+                PID=$(cat logs/payment-service.pid)
+                if kill -0 $PID 2>/dev/null; then
+                    kill $PID
+                    print_success "Payment service stopped (PID: $PID)"
+                else
+                    print_warning "Payment service was not running"
+                fi
+                rm -f logs/payment-service.pid
+            fi
+            ;;
+        gateway|all)
+            if [ -f "logs/gateway.pid" ]; then
+                PID=$(cat logs/gateway.pid)
+                if kill -0 $PID 2>/dev/null; then
+                    kill $PID
+                    print_success "Gateway service stopped (PID: $PID)"
+                else
+                    print_warning "Gateway service was not running"
+                fi
+                rm -f logs/gateway.pid
+            fi
+            ;;
     esac
     
     if [ "$SERVICE" = "all" ]; then
