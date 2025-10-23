@@ -81,15 +81,15 @@ func NewDatabase(config *config.DatabaseConfig) (*Database, error) {
 
 // Migrate runs database migrations
 func (d *Database) Migrate() error {
-	Logger.Info("Running database migrations...")
+	d.Logger.Info("Running database migrations...")
 
 	// Auto migrate Product model
-	if err := d.DB.AutoMigrate(&Product{}); err != nil {
-		Logger.WithError(err).Error("Failed to migrate Product model")
+	if err := d.DB.AutoMigrate(&entity.Product{}); err != nil {
+		d.Logger.WithError(err).Error("Failed to migrate Product model")
 		return fmt.Errorf("failed to migrate Product model: %w", err)
 	}
 
-	Logger.Info("Database migrations completed successfully")
+	d.Logger.Info("Database migrations completed successfully")
 	return nil
 }
 
@@ -101,11 +101,11 @@ func (d *Database) Close() error {
 	}
 
 	if err := sqlDB.Close(); err != nil {
-		Logger.WithError(err).Error("Failed to close database connection")
+		d.Logger.WithError(err).Error("Failed to close database connection")
 		return fmt.Errorf("failed to close database connection: %w", err)
 	}
 
-	Logger.Info("Database connection closed")
+	d.Logger.Info("Database connection closed")
 	return nil
 }
 
@@ -125,18 +125,18 @@ func (d *Database) Health() error {
 
 // SeedData seeds the database with initial data
 func (d *Database) SeedData() error {
-	Logger.Info("Seeding database with initial data...")
+	d.Logger.Info("Seeding database with initial data...")
 
 	// Check if data already exists
 	var count int64
-	d.DB.Model(&Product{}).Count(&count)
+	d.DB.Model(&entity.Product{}).Count(&count)
 	if count > 0 {
-		Logger.Info("Database already contains data, skipping seed")
+		d.Logger.Info("Database already contains data, skipping seed")
 		return nil
 	}
 
 	// Sample products
-	products := []Product{
+	products := []entity.Product{
 		{
 			Name:        "MacBook Pro 16-inch",
 			Description: "Apple MacBook Pro with M2 Pro chip",
@@ -215,11 +215,11 @@ func (d *Database) SeedData() error {
 		product.UpdatedAt = time.Now()
 		
 		if err := d.DB.Create(&product).Error; err != nil {
-			Logger.WithError(err).WithField("product", product.Name).Error("Failed to seed product")
+			d.Logger.WithError(err).WithField("product", product.Name).Error("Failed to seed product")
 			return fmt.Errorf("failed to seed product %s: %w", product.Name, err)
 		}
 	}
 
-	Logger.WithField("count", len(products)).Info("Database seeded successfully")
+	d.Logger.WithField("count", len(products)).Info("Database seeded successfully")
 	return nil
 }
