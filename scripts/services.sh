@@ -352,6 +352,20 @@ show_logs() {
                 print_error "Basket service log file not found"
             fi
             ;;
+        payment)
+            if [ -f "logs/payment-service.log" ]; then
+                tail -f logs/payment-service.log
+            else
+                print_error "Payment service log file not found"
+            fi
+            ;;
+        gateway)
+            if [ -f "logs/gateway.log" ]; then
+                tail -f logs/gateway.log
+            else
+                print_error "Gateway service log file not found"
+            fi
+            ;;
         all)
             print_status "Showing logs for all services..."
             if [ -f "logs/product-service.log" ]; then
@@ -362,6 +376,16 @@ show_logs() {
             if [ -f "logs/basket-service.log" ]; then
                 print_status "=== BASKET SERVICE LOGS ==="
                 tail -20 logs/basket-service.log
+                echo ""
+            fi
+            if [ -f "logs/payment-service.log" ]; then
+                print_status "=== PAYMENT SERVICE LOGS ==="
+                tail -20 logs/payment-service.log
+                echo ""
+            fi
+            if [ -f "logs/gateway.log" ]; then
+                print_status "=== GATEWAY SERVICE LOGS ==="
+                tail -20 logs/gateway.log
                 echo ""
             fi
             ;;
