@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🧪 Running Product Service Tests..."
+echo "🧪 Running Microservices Tests..."
 
 # Colors for output
 RED='\033[0;31m'
