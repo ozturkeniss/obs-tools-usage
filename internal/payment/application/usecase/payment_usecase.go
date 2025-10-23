@@ -614,3 +614,12 @@ func (uc *PaymentUseCase) convertToPaymentItemEvents(items []*entity.PaymentItem
 	return eventItems
 }
 
+// convertMetadata converts map[string]string to map[string]interface{}
+func (uc *PaymentUseCase) convertMetadata(metadata map[string]string) map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range metadata {
+		result[k] = v
+	}
+	return result
+}
+
