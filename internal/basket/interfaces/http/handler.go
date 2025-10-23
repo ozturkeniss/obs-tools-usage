@@ -220,6 +220,179 @@ func (h *Handler) DeleteBasket(c *gin.Context) {
 	})
 }
 
+// GetBasketItems handles GET /baskets/:user_id/items
+func (h *Handler) GetBasketItems(c *gin.Context) {
+	userID := c.Param("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID is required",
+		})
+		return
+	}
+
+	items, err := h.queryHandler.HandleGetBasketItems(query.GetBasketItemsQuery{UserID: userID})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, items)
+}
+
+// GetBasketTotal handles GET /baskets/:user_id/total
+func (h *Handler) GetBasketTotal(c *gin.Context) {
+	userID := c.Param("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID is required",
+		})
+		return
+	}
+
+	total, err := h.queryHandler.HandleGetBasketTotal(query.GetBasketTotalQuery{UserID: userID})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, total)
+}
+
+// GetBasketItemCount handles GET /baskets/:user_id/count
+func (h *Handler) GetBasketItemCount(c *gin.Context) {
+	userID := c.Param("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID is required",
+		})
+		return
+	}
+
+	count, err := h.queryHandler.HandleGetBasketItemCount(query.GetBasketItemCountQuery{UserID: userID})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, count)
+}
+
+// GetBasketByCategory handles GET /baskets/:user_id/category/:category
+func (h *Handler) GetBasketByCategory(c *gin.Context) {
+	userID := c.Param("user_id")
+	category := c.Param("category")
+	
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID is required",
+		})
+		return
+	}
+
+	if category == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid category",
+			Message: "Category is required",
+		})
+		return
+	}
+
+	items, err := h.queryHandler.HandleGetBasketByCategory(query.GetBasketByCategoryQuery{
+		UserID:   userID,
+		Category: category,
+	})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, items)
+}
+
+// GetBasketStats handles GET /baskets/:user_id/stats
+func (h *Handler) GetBasketStats(c *gin.Context) {
+	userID := c.Param("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID is required",
+		})
+		return
+	}
+
+	stats, err := h.queryHandler.HandleGetBasketStats(query.GetBasketStatsQuery{UserID: userID})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
+}
+
+// GetBasketExpiry handles GET /baskets/:user_id/expiry
+func (h *Handler) GetBasketExpiry(c *gin.Context) {
+	userID := c.Param("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID is required",
+		})
+		return
+	}
+
+	expiry, err := h.queryHandler.HandleGetBasketExpiry(query.GetBasketExpiryQuery{UserID: userID})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, expiry)
+}
+
+// GetBasketHistory handles GET /baskets/:user_id/history
+func (h *Handler) GetBasketHistory(c *gin.Context) {
+	userID := c.Param("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID is required",
+		})
+		return
+	}
+
+	history, err := h.queryHandler.HandleGetBasketHistory(query.GetBasketHistoryQuery{UserID: userID})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, history)
+}
+
+// GetBasketRecommendations handles GET /baskets/:user_id/recommendations
+func (h *Handler) GetBasketRecommendations(c *gin.Context) {
+	userID := c.Param("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID is required",
+		})
+		return
+	}
+
+	recommendations, err := h.queryHandler.HandleGetBasketRecommendations(query.GetBasketRecommendationsQuery{UserID: userID})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, recommendations)
+}
+
 // HealthCheck handles GET /health
 func (h *Handler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.HealthResponse{
