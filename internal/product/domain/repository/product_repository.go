@@ -14,4 +14,11 @@ type ProductRepository interface {
 	GetTopMostExpensive(limit int) ([]entity.Product, error)
 	GetLowStockProducts(maxStock int) ([]entity.Product, error)
 	GetProductsByCategory(category string) ([]entity.Product, error)
+	GetProductsByPriceRange(minPrice, maxPrice float64) ([]entity.Product, error)
+	GetProductsByName(name string) ([]entity.Product, error)
+	GetProductStats() (*entity.ProductStats, error)
+	GetCategories() ([]entity.Category, error)
+	GetProductsByStock(stock int) ([]entity.Product, error)
+	GetRandomProducts(count int) ([]entity.Product, error)
+	GetProductsByDateRange(startDate, endDate string) ([]entity.Product, error)
 }
