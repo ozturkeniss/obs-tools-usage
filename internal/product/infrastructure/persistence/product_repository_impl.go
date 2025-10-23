@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
