@@ -1,9 +1,10 @@
-package product
+package external
 
 import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"obs-tools-usage/internal/product/domain/entity"
 )
 
 // BusinessEvent represents a business event
@@ -44,13 +45,14 @@ func LogBusinessEvent(logger *logrus.Entry, event BusinessEvent) {
 	}
 	
 	// Mask sensitive data in event fields
-	maskedEventFields := MaskFields(eventFields)
+	// maskedEventFields := MaskFields(eventFields)
+	maskedEventFields := eventFields
 	
 	logger.WithFields(maskedEventFields).Info("Business event occurred")
 }
 
 // LogProductCreated logs when a product is created
-func LogProductCreated(logger *logrus.Entry, product Product, userID string) {
+func LogProductCreated(logger *logrus.Entry, product entity.Product, userID string) {
 	event := BusinessEvent{
 		EventType:   "product",
 		EventName:   "product_created",
@@ -71,7 +73,7 @@ func LogProductCreated(logger *logrus.Entry, product Product, userID string) {
 }
 
 // LogProductUpdated logs when a product is updated
-func LogProductUpdated(logger *logrus.Entry, oldProduct, newProduct Product, userID string) {
+func LogProductUpdated(logger *logrus.Entry, oldProduct, newProduct entity.Product, userID string) {
 	event := BusinessEvent{
 		EventType:   "product",
 		EventName:   "product_updated",
@@ -105,7 +107,7 @@ func LogProductUpdated(logger *logrus.Entry, oldProduct, newProduct Product, use
 }
 
 // LogProductDeleted logs when a product is deleted
-func LogProductDeleted(logger *logrus.Entry, product Product, userID string) {
+func LogProductDeleted(logger *logrus.Entry, product entity.Product, userID string) {
 	event := BusinessEvent{
 		EventType:   "product",
 		EventName:   "product_deleted",
@@ -125,7 +127,7 @@ func LogProductDeleted(logger *logrus.Entry, product Product, userID string) {
 }
 
 // LogLowStockAlert logs when stock is low
-func LogLowStockAlert(logger *logrus.Entry, product Product, threshold int) {
+func LogLowStockAlert(logger *logrus.Entry, product entity.Product, threshold int) {
 	event := BusinessEvent{
 		EventType:   "inventory",
 		EventName:   "low_stock_alert",
@@ -144,7 +146,7 @@ func LogLowStockAlert(logger *logrus.Entry, product Product, threshold int) {
 }
 
 // LogHighValueProduct logs when a high-value product is accessed
-func LogHighValueProduct(logger *logrus.Entry, product Product, userID string) {
+func LogHighValueProduct(logger *logrus.Entry, product entity.Product, userID string) {
 	event := BusinessEvent{
 		EventType:   "product",
 		EventName:   "high_value_product_accessed",
