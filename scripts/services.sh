@@ -130,6 +130,26 @@ show_status() {
         print_error "Basket Service gRPC (50051): ❌ Not running"
     fi
     
+    # Check Payment Service
+    if check_service "payment-service" 8082; then
+        print_success "Payment Service HTTP (8082): ✅ Running"
+    else
+        print_error "Payment Service HTTP (8082): ❌ Not running"
+    fi
+    
+    if check_service "payment-service" 50052; then
+        print_success "Payment Service gRPC (50052): ✅ Running"
+    else
+        print_error "Payment Service gRPC (50052): ❌ Not running"
+    fi
+    
+    # Check Gateway Service
+    if check_service "gateway" 8083; then
+        print_success "FiberV2 Gateway (8083): ✅ Running"
+    else
+        print_error "FiberV2 Gateway (8083): ❌ Not running"
+    fi
+    
     # Check dependencies
     if check_service "postgres" 5432; then
         print_success "PostgreSQL (5432): ✅ Running"
