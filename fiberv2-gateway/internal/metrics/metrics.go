@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/contrib/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -59,10 +58,6 @@ func SetupMetrics(app *fiber.App) {
 			[]string{"service"},
 		),
 	}
-
-	// Setup Prometheus middleware
-	prometheusMiddleware := prometheus.NewPrometheus("gateway", nil)
-	app.Use(prometheusMiddleware)
 
 	// Custom metrics middleware
 	app.Use(func(c *fiber.Ctx) error {
