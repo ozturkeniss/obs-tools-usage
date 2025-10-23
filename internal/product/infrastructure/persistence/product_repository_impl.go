@@ -373,3 +373,285 @@ func (r *ProductRepositoryImpl) GetProductsByCategory(category string) ([]entity
 
 	return products, nil
 }
+// GetProductsByPriceRange returns products by price range
+func (r *ProductRepositoryImpl) GetProductsByPriceRange(minPrice, maxPrice float64) ([]entity.Product, error) {
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByPriceRange",
+		"min_price": minPrice,
+		"max_price": maxPrice,
+	}).Debug("Database operation started")
+
+	var products []entity.Product
+	result := r.db.Where("price BETWEEN ? AND ?", minPrice, maxPrice).Find(&products)
+	duration := time.Since(start)
+
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetProductsByPriceRange",
+			"action":    "SELECT",
+			"min_price": minPrice,
+			"max_price": maxPrice,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+
+		external.RecordDatabaseOperation("GetProductsByPriceRange", "SELECT", duration)
+		return nil, result.Error
+	}
+
+	external.RecordDatabaseOperation("GetProductsByPriceRange", "SELECT", duration)
+
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByPriceRange",
+		"action":    "SELECT",
+		"min_price": minPrice,
+		"max_price": maxPrice,
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+
+	return products, nil
+}
+
+// GetProductsByName returns products by name
+func (r *ProductRepositoryImpl) GetProductsByName(name string) ([]entity.Product, error) {
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByName",
+		"name":      name,
+	}).Debug("Database operation started")
+
+	var products []entity.Product
+	result := r.db.Where("name ILIKE ?", "%"+name+"%").Find(&products)
+	duration := time.Since(start)
+
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetProductsByName",
+			"action":    "SELECT",
+			"name":      name,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+
+		external.RecordDatabaseOperation("GetProductsByName", "SELECT", duration)
+		return nil, result.Error
+	}
+
+	external.RecordDatabaseOperation("GetProductsByName", "SELECT", duration)
+
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByName",
+		"action":    "SELECT",
+		"name":      name,
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+
+	return products, nil
+}
+
+// GetProductStats returns product statistics
+func (r *ProductRepositoryImpl) GetProductStats() (*entity.ProductStats, error) {
+	start := time.Now()
+	r.logger.WithField("operation", "GetProductStats").Debug("Database operation started")
+
+	var stats entity.ProductStats
+	
+	// Get total products count
+	if err := r.db.Model(&entity.Product{}).Count(&stats.TotalProducts).Error; err != nil {
+		return nil, err
+	}
+
+	// Get total categories count
+	if err := r.db.Model(&entity.Product{}).Distinct("category").Count(&stats.TotalCategories).Error; err != nil {
+		return nil, err
+	}
+
+	// Get average price
+	if err := r.db.Model(&entity.Product{}).Select("AVG(price)").Scan(&stats.AveragePrice).Error; err != nil {
+		return nil, err
+	}
+
+	// Get total value
+	if err := r.db.Model(&entity.Product{}).Select("SUM(price * stock)").Scan(&stats.TotalValue).Error; err != nil {
+		return nil, err
+	}
+
+	// Get low stock products count
+	if err := r.db.Model(&entity.Product{}).Where("stock <= 10").Count(&stats.LowStockProducts).Error; err != nil {
+		return nil, err
+	}
+
+	// Get out of stock products count
+	if err := r.db.Model(&entity.Product{}).Where("stock = 0").Count(&stats.OutOfStockProducts).Error; err != nil {
+		return nil, err
+	}
+
+	duration := time.Since(start)
+	external.RecordDatabaseOperation("GetProductStats", "SELECT", duration)
+
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductStats",
+		"action":    "SELECT",
+		"duration_ms": duration.Milliseconds(),
+		"total_products": stats.TotalProducts,
+		"total_categories": stats.TotalCategories,
+	}).Info("Database operation completed")
+
+	return &stats, nil
+}
+
+// GetCategories returns all categories
+func (r *ProductRepositoryImpl) GetCategories() ([]entity.Category, error) {
+	start := time.Now()
+	r.logger.WithField("operation", "GetCategories").Debug("Database operation started")
+
+	var categories []entity.Category
+	result := r.db.Model(&entity.Product{}).
+		Select("category as name, COUNT(*) as product_count, AVG(price) as average_price").
+		Group("category").
+		Find(&categories)
+	duration := time.Since(start)
+
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetCategories",
+			"action":    "SELECT",
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+
+		external.RecordDatabaseOperation("GetCategories", "SELECT", duration)
+		return nil, result.Error
+	}
+
+	external.RecordDatabaseOperation("GetCategories", "SELECT", duration)
+
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetCategories",
+		"action":    "SELECT",
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(categories),
+	}).Info("Database operation completed")
+
+	return categories, nil
+}
+
+// GetProductsByStock returns products by stock level
+func (r *ProductRepositoryImpl) GetProductsByStock(stock int) ([]entity.Product, error) {
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByStock",
+		"stock":     stock,
+	}).Debug("Database operation started")
+
+	var products []entity.Product
+	result := r.db.Where("stock = ?", stock).Find(&products)
+	duration := time.Since(start)
+
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetProductsByStock",
+			"action":    "SELECT",
+			"stock":     stock,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+
+		external.RecordDatabaseOperation("GetProductsByStock", "SELECT", duration)
+		return nil, result.Error
+	}
+
+	external.RecordDatabaseOperation("GetProductsByStock", "SELECT", duration)
+
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByStock",
+		"action":    "SELECT",
+		"stock":     stock,
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+
+	return products, nil
+}
+
+// GetRandomProducts returns random products
+func (r *ProductRepositoryImpl) GetRandomProducts(count int) ([]entity.Product, error) {
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetRandomProducts",
+		"count":     count,
+	}).Debug("Database operation started")
+
+	var products []entity.Product
+	result := r.db.Order("RANDOM()").Limit(count).Find(&products)
+	duration := time.Since(start)
+
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetRandomProducts",
+			"action":    "SELECT",
+			"count":     count,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+
+		external.RecordDatabaseOperation("GetRandomProducts", "SELECT", duration)
+		return nil, result.Error
+	}
+
+	external.RecordDatabaseOperation("GetRandomProducts", "SELECT", duration)
+
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetRandomProducts",
+		"action":    "SELECT",
+		"count":     count,
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+
+	return products, nil
+}
+
+// GetProductsByDateRange returns products by date range
+func (r *ProductRepositoryImpl) GetProductsByDateRange(startDate, endDate string) ([]entity.Product, error) {
+	start := time.Now()
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByDateRange",
+		"start_date": startDate,
+		"end_date":   endDate,
+	}).Debug("Database operation started")
+
+	var products []entity.Product
+	result := r.db.Where("created_at BETWEEN ? AND ?", startDate, endDate).Find(&products)
+	duration := time.Since(start)
+
+	if result.Error != nil {
+		r.logger.WithFields(logrus.Fields{
+			"operation": "GetProductsByDateRange",
+			"action":    "SELECT",
+			"start_date": startDate,
+			"end_date":   endDate,
+			"error":     result.Error.Error(),
+			"duration_ms": duration.Milliseconds(),
+		}).Error("Database operation failed")
+
+		external.RecordDatabaseOperation("GetProductsByDateRange", "SELECT", duration)
+		return nil, result.Error
+	}
+
+	external.RecordDatabaseOperation("GetProductsByDateRange", "SELECT", duration)
+
+	r.logger.WithFields(logrus.Fields{
+		"operation": "GetProductsByDateRange",
+		"action":    "SELECT",
+		"start_date": startDate,
+		"end_date":   endDate,
+		"duration_ms": duration.Milliseconds(),
+		"record_count": len(products),
+	}).Info("Database operation completed")
+
+	return products, nil
+}
