@@ -10,7 +10,7 @@ import (
 	"obs-tools-usage/internal/product/infrastructure/config"
 	"obs-tools-usage/internal/product/infrastructure/persistence"
 	"obs-tools-usage/internal/product/interfaces/grpc"
-	"obs-tools-usage/internal/product/interfaces/http"
+	httpInterface "obs-tools-usage/internal/product/interfaces/http"
 
 	"github.com/google/wire"
 	"gorm.io/gorm"
@@ -36,8 +36,8 @@ var ProviderSet = wire.NewSet(
 	handler.NewQueryHandler,
 
 	// HTTP
-	http.NewHandler,
-	http.SetupRoutes,
+	httpInterface.NewHandler,
+	httpInterface.SetupRoutes,
 
 	// gRPC
 	grpc.NewGRPCServer,
@@ -57,8 +57,8 @@ func NewProductRepositoryProvider(db *gorm.DB) repository.ProductRepository {
 func NewHTTPHandlerProvider(
 	commandHandler *handler.CommandHandler,
 	queryHandler *handler.QueryHandler,
-) *http.Handler {
-	return http.NewHandler(commandHandler, queryHandler)
+) *httpInterface.Handler {
+	return httpInterface.NewHandler(commandHandler, queryHandler)
 }
 
 // GRPCServerProvider provides gRPC server
