@@ -124,6 +124,9 @@ func (s *GRPCServer) UpdateProduct(ctx context.Context, req *pb.UpdateProductReq
 		"price":      req.Price,
 	}).Debug("UpdateProduct gRPC request")
 
+	// Get old product for logging
+	oldProduct, _ := s.repository.GetProductByID(int(req.Id))
+
 	cmd := command.UpdateProductCommand{
 		ID:          int(req.Id),
 		Name:        req.Name,
@@ -140,7 +143,9 @@ func (s *GRPCServer) UpdateProduct(ctx context.Context, req *pb.UpdateProductReq
 	}
 
 	// Log business event
-	external.LogProductUpdated(s.logger.WithField("source", "gRPC"), *updatedProduct, "gRPC")
+	if oldProduct != nil {
+		external.LogProductUpdated(s.logger.WithField("source", "gRPC"), *oldProduct, *updatedProduct, "gRPC")
+	}
 
 	return &pb.ProductResponse{
 		Product: s.productToProto(updatedProduct),
@@ -151,6 +156,9 @@ func (s *GRPCServer) UpdateProduct(ctx context.Context, req *pb.UpdateProductReq
 func (s *GRPCServer) DeleteProduct(ctx context.Context, req *pb.DeleteProductRequest) (*pb.DeleteProductResponse, error) {
 	s.logger.WithField("product_id", req.Id).Debug("DeleteProduct gRPC request")
 
+	// Get product before deletion for logging
+	product, _ := s.repository.GetProductByID(int(req.Id))
+
 	err := s.commandHandler.HandleDeleteProduct(command.DeleteProductCommand{ID: int(req.Id)})
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to delete product")
@@ -158,7 +166,9 @@ func (s *GRPCServer) DeleteProduct(ctx context.Context, req *pb.DeleteProductReq
 	}
 
 	// Log business event
-	external.LogProductDeleted(s.logger.WithField("source", "gRPC"), int(req.Id), "gRPC")
+	if product != nil {
+		external.LogProductDeleted(s.logger.WithField("source", "gRPC"), *product, "gRPC")
+	}
 
 	return &pb.DeleteProductResponse{
 		Message: "Product deleted successfully",
