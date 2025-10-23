@@ -56,3 +56,13 @@ func (h *CommandHandler) HandleRefundPayment(cmd command.RefundPaymentCommand) (
 		cmd.Reason,
 	)
 }
+
+// HandleCancelPayment handles CancelPaymentCommand
+func (h *CommandHandler) HandleCancelPayment(cmd command.CancelPaymentCommand) (*dto.PaymentResponse, error) {
+	return h.paymentUseCase.CancelPayment(cmd.PaymentID)
+}
+
+// HandleRetryPayment handles RetryPaymentCommand
+func (h *CommandHandler) HandleRetryPayment(cmd command.RetryPaymentCommand) (*dto.PaymentResponse, error) {
+	return h.paymentUseCase.RetryPayment(cmd.PaymentID)
+}
