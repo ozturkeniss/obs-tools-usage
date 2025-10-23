@@ -86,6 +86,52 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
+// CancelPaymentRequest represents the request payload for cancelling a payment
+type CancelPaymentRequest struct {
+	PaymentID string `json:"payment_id" binding:"required"`
+}
+
+// RetryPaymentRequest represents the request payload for retrying a payment
+type RetryPaymentRequest struct {
+	PaymentID string `json:"payment_id" binding:"required"`
+}
+
+// PaymentAnalyticsResponse represents payment analytics response
+type PaymentAnalyticsResponse struct {
+	TotalPayments     int64   `json:"total_payments"`
+	TotalRevenue      float64 `json:"total_revenue"`
+	SuccessRate       float64 `json:"success_rate"`
+	AverageAmount     float64 `json:"average_amount"`
+	TopPaymentMethod  string  `json:"top_payment_method"`
+	TopProvider       string  `json:"top_provider"`
+	DailyTransactions int64   `json:"daily_transactions"`
+	MonthlyRevenue    float64 `json:"monthly_revenue"`
+}
+
+// PaymentMethodsResponse represents payment methods response
+type PaymentMethodsResponse struct {
+	Methods []string `json:"methods"`
+	Count   int      `json:"count"`
+}
+
+// PaymentProvidersResponse represents payment providers response
+type PaymentProvidersResponse struct {
+	Providers []string `json:"providers"`
+	Count     int      `json:"count"`
+}
+
+// PaymentSummaryResponse represents payment summary response
+type PaymentSummaryResponse struct {
+	TotalPayments     int64   `json:"total_payments"`
+	TotalRevenue      float64 `json:"total_revenue"`
+	PendingPayments   int64   `json:"pending_payments"`
+	CompletedPayments int64   `json:"completed_payments"`
+	FailedPayments    int64   `json:"failed_payments"`
+	RefundedPayments  int64   `json:"refunded_payments"`
+	SuccessRate       float64 `json:"success_rate"`
+	AverageAmount     float64 `json:"average_amount"`
+}
+
 // HealthResponse represents a health check response
 type HealthResponse struct {
 	Service   string `json:"service"`
