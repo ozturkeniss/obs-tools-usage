@@ -16,6 +16,9 @@ type Config struct {
 	LogLevel    string
 	LogFormat   string
 	
+	// Redis configuration
+	Redis RedisConfig
+	
 	// Services configuration
 	Services ServicesConfig
 	
@@ -106,6 +109,20 @@ type MetricsConfig struct {
 	Path    string
 }
 
+// RedisConfig holds Redis configuration
+type RedisConfig struct {
+	Host         string
+	Port         string
+	Password     string
+	DB           int
+	PoolSize     int
+	MinIdleConns int
+	MaxRetries   int
+	DialTimeout  time.Duration
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+}
+
 // LoadConfig loads configuration from environment variables
 func LoadConfig() *Config {
 	return &Config{
@@ -113,6 +130,19 @@ func LoadConfig() *Config {
 		Environment: getEnv("ENVIRONMENT", "development"),
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
 		LogFormat:   getEnv("LOG_FORMAT", "json"),
+		
+		Redis: RedisConfig{
+			Host:         getEnv("REDIS_HOST", "localhost"),
+			Port:         getEnv("REDIS_PORT", "6379"),
+			Password:     getEnv("REDIS_PASSWORD", ""),
+			DB:           getEnvAsInt("REDIS_DB", 0),
+			PoolSize:     getEnvAsInt("REDIS_POOL_SIZE", 10),
+			MinIdleConns: getEnvAsInt("REDIS_MIN_IDLE_CONNS", 5),
+			MaxRetries:   getEnvAsInt("REDIS_MAX_RETRIES", 3),
+			DialTimeout:  getEnvAsDuration("REDIS_DIAL_TIMEOUT", "5s"),
+			ReadTimeout:  getEnvAsDuration("REDIS_READ_TIMEOUT", "3s"),
+			WriteTimeout: getEnvAsDuration("REDIS_WRITE_TIMEOUT", "3s"),
+		},
 		
 		Services: ServicesConfig{
 			Product: ProductServiceConfig{
