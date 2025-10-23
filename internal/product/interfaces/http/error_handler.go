@@ -45,7 +45,7 @@ func HandleError(c *gin.Context, err error) {
 		statusCode = http.StatusConflict
 	}
 
-	c.JSON(statusCode, dto.ErrorResponse{
+	c.JSON(statusCode, ErrorResponse{
 		Error:   http.StatusText(statusCode),
 		Message: errorMsg,
 	})
