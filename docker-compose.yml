@@ -18,6 +18,20 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: basket-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   product-service:
     build:
       context: .
@@ -43,5 +57,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  basket-service:
+    build:
+      context: .
+      dockerfile: dockerfiles/basket.dockerfile
+    container_name: basket-service
+    ports:
+      - "8081:8081"
+    environment:
+      - ENVIRONMENT=development
+      - PORT=8081
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - PRODUCT_SERVICE_URL=product-service:50050
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=text
+      - LOG_OUTPUT=console
+    depends_on:
+      redis:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  redis_data:
