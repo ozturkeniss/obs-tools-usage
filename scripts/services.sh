@@ -196,8 +196,8 @@ start_services() {
     print_status "Starting services..."
     
     # Start dependencies first
-    print_status "Starting dependencies (PostgreSQL, Redis)..."
-    docker-compose up -d postgres redis
+    print_status "Starting dependencies (PostgreSQL, Redis, MariaDB, Kafka)..."
+    docker-compose up -d postgres redis mariadb zookeeper kafka
     
     # Wait for dependencies
     print_status "Waiting for dependencies to be ready..."
@@ -214,19 +214,45 @@ start_services() {
         go build -o bin/basket-service cmd/basket/main.go
     fi
     
+    if [ ! -f "bin/payment-service" ]; then
+        print_status "Building payment service..."
+        go build -o bin/payment-service cmd/payment/main.go
+    fi
+    
+    if [ ! -f "fiberv2-gateway/bin/gateway" ]; then
+        print_status "Building gateway service..."
+        cd fiberv2-gateway
+        go build -o bin/gateway cmd/main.go
+        cd ..
+    fi
+    
     # Start services based on selection
     case $SERVICE in
         product|all)
             print_status "Starting product service..."
             nohup ./bin/product-service > logs/product-service.log 2>&1 &
             echo $! > logs/product-service.pid
-            print_s_started "Product service started (PID: $(cat logs/product-service.pid))"
+            print_success "Product service started (PID: $(cat logs/product-service.pid))"
             ;;
         basket|all)
             print_status "Starting basket service..."
             nohup ./bin/basket-service > logs/basket-service.log 2>&1 &
             echo $! > logs/basket-service.pid
             print_success "Basket service started (PID: $(cat logs/basket-service.pid))"
+            ;;
+        payment|all)
+            print_status "Starting payment service..."
+            nohup ./bin/payment-service > logs/payment-service.log 2>&1 &
+            echo $! > logs/payment-service.pid
+            print_success "Payment service started (PID: $(cat logs/payment-service.pid))"
+            ;;
+        gateway|all)
+            print_status "Starting gateway service..."
+            cd fiberv2-gateway
+            nohup ./bin/gateway > ../logs/gateway.log 2>&1 &
+            echo $! > ../logs/gateway.pid
+            cd ..
+            print_success "Gateway service started (PID: $(cat logs/gateway.pid))"
             ;;
     esac
     
