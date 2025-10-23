@@ -5,6 +5,10 @@
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
 graph TB
+    subgraph "API Gateway"
+        Gateway[FiberV2 Gateway<br/>HTTP: 8083<br/>Load Balancer<br/>Circuit Breaker<br/>Rate Limiting]
+    end
+    
     subgraph "Microservices"
         Product[Product Service<br/>HTTP: 8080<br/>gRPC: 50050]
         Basket[Basket Service<br/>HTTP: 8081<br/>gRPC: 50051]
@@ -27,12 +31,12 @@ graph TB
         GRPCClient[gRPC Client]
     end
     
-    HTTPClient --> Product
-    HTTPClient --> Basket
-    HTTPClient --> Payment
-    GRPCClient --> Product
-    GRPCClient --> Basket
-    GRPCClient --> Payment
+    HTTPClient --> Gateway
+    GRPCClient --> Gateway
+    
+    Gateway --> Product
+    Gateway --> Basket
+    Gateway --> Payment
     
     Product --> PostgreSQL
     Basket --> Redis
@@ -44,6 +48,196 @@ graph TB
     
     Payment --> Kafka
     Kafka --> Zookeeper
+```
+
+## FiberV2 Gateway Architecture
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "External Layer"
+        HTTPClient[HTTP Client]
+        AdminClient[Admin Client]
+    end
+    
+    subgraph "Gateway Layer"
+        Gateway[FiberV2 Gateway<br/>Port: 8083]
+        Middleware[Middleware<br/>CORS, Logging, Metrics<br/>Rate Limiting, Security]
+    end
+    
+    subgraph "Routing Layer"
+        Router[Router<br/>Service Routing<br/>Path Rewriting]
+        LoadBalancer[Load Balancer<br/>Round Robin<br/>Least Connections<br/>Weighted Round Robin]
+    end
+    
+    subgraph "Circuit Breaker Layer"
+        CircuitBreaker[Circuit Breaker<br/>Failure Detection<br/>Service Isolation<br/>Auto Recovery]
+    end
+    
+    subgraph "Proxy Layer"
+        ReverseProxy[Reverse Proxy<br/>Request Forwarding<br/>Response Handling<br/>Header Management]
+    end
+    
+    subgraph "Backend Services"
+        ProductService[Product Service<br/>Port: 8080]
+        BasketService[Basket Service<br/>Port: 8081]
+        PaymentService[Payment Service<br/>Port: 8082]
+    end
+    
+    HTTPClient --> Gateway
+    AdminClient --> Gateway
+    
+    Gateway --> Middleware
+    Middleware --> Router
+    
+    Router --> LoadBalancer
+    LoadBalancer --> CircuitBreaker
+    
+    CircuitBreaker --> ReverseProxy
+    ReverseProxy --> ProductService
+    ReverseProxy --> BasketService
+    ReverseProxy --> PaymentService
+```
+
+## FiberV2 Gateway Features
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Core Features"
+        ReverseProxy[Reverse Proxy<br/>Request Forwarding<br/>Response Handling]
+        LoadBalancing[Load Balancing<br/>Round Robin<br/>Least Connections<br/>Weighted Round Robin]
+        CircuitBreaker[Circuit Breaker<br/>Failure Detection<br/>Service Isolation<br/>Auto Recovery]
+    end
+    
+    subgraph "Security Features"
+        RateLimiting[Rate Limiting<br/>Request Throttling<br/>Burst Control]
+        CORSSupport[CORS Support<br/>Cross-Origin Requests<br/>Header Management]
+        SecurityHeaders[Security Headers<br/>XSS Protection<br/>CSRF Protection<br/>HSTS]
+    end
+    
+    subgraph "Monitoring Features"
+        HealthChecks[Health Checks<br/>Service Monitoring<br/>Status Reporting]
+        Metrics[Prometheus Metrics<br/>Request Counters<br/>Response Times<br/>Error Rates]
+        Logging[Structured Logging<br/>Request Tracking<br/>Error Logging]
+    end
+    
+    subgraph "Admin Features"
+        AdminAPI[Admin API<br/>Service Management<br/>Configuration Updates]
+        StatusMonitoring[Status Monitoring<br/>Real-time Health<br/>Performance Metrics]
+        ServiceDiscovery[Service Discovery<br/>Dynamic Backend<br/>Configuration]
+    end
+    
+    ReverseProxy --> LoadBalancing
+    LoadBalancing --> CircuitBreaker
+    CircuitBreaker --> RateLimiting
+    RateLimiting --> CORSSupport
+    CORSSupport --> SecurityHeaders
+    SecurityHeaders --> HealthChecks
+    HealthChecks --> Metrics
+    Metrics --> Logging
+    Logging --> AdminAPI
+    AdminAPI --> StatusMonitoring
+    StatusMonitoring --> ServiceDiscovery
+```
+
+## FiberV2 Gateway API Endpoints
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph LR
+    subgraph "Service Endpoints"
+        ProductAPI[GET /api/products/*<br/>Product Service Proxy]
+        BasketAPI[GET /api/baskets/*<br/>Basket Service Proxy]
+        PaymentAPI[GET /api/payments/*<br/>Payment Service Proxy]
+    end
+    
+    subgraph "Admin Endpoints"
+        GatewayStatus[GET /admin/status<br/>Gateway Status]
+        ServiceStatus[GET /admin/services<br/>Service Status]
+        LoadBalancerStats[GET /admin/loadbalancer/:service<br/>Load Balancer Stats]
+        CircuitBreakerStats[GET /admin/circuitbreaker/:service<br/>Circuit Breaker Stats]
+    end
+    
+    subgraph "Health Endpoints"
+        HealthCheck[GET /health<br/>Health Check]
+        DetailedHealth[GET /health/detailed<br/>Detailed Health Check]
+        ReadinessCheck[GET /health/ready<br/>Readiness Check]
+        LivenessCheck[GET /health/live<br/>Liveness Check]
+    end
+    
+    subgraph "Metrics Endpoint"
+        Metrics[GET /metrics<br/>Prometheus Metrics]
+    end
+    
+    ProductAPI --> GatewayStatus
+    BasketAPI --> ServiceStatus
+    PaymentAPI --> LoadBalancerStats
+    GatewayStatus --> CircuitBreakerStats
+    ServiceStatus --> HealthCheck
+    LoadBalancerStats --> DetailedHealth
+    CircuitBreakerStats --> ReadinessCheck
+    HealthCheck --> LivenessCheck
+    DetailedHealth --> Metrics
+```
+
+## FiberV2 Gateway Environment Variables
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Server Configuration"
+        PORT[PORT: 8080]
+        LOG_LEVEL[LOG_LEVEL: info]
+        LOG_FORMAT[LOG_FORMAT: json]
+    end
+    
+    subgraph "Service Configuration"
+        PRODUCT_ENABLED[PRODUCT_SERVICE_ENABLED: true]
+        PRODUCT_URLS[PRODUCT_SERVICE_URLS: http://product-service:8080]
+        BASKET_ENABLED[BASKET_SERVICE_ENABLED: true]
+        BASKET_URLS[BASKET_SERVICE_URLS: http://basket-service:8081]
+        PAYMENT_ENABLED[PAYMENT_SERVICE_ENABLED: true]
+        PAYMENT_URLS[PAYMENT_SERVICE_URLS: http://payment-service:8082]
+    end
+    
+    subgraph "Circuit Breaker Configuration"
+        CB_ENABLED[CIRCUIT_BREAKER_ENABLED: true]
+        CB_MAX_REQUESTS[CIRCUIT_BREAKER_MAX_REQUESTS: 10]
+        CB_INTERVAL[CIRCUIT_BREAKER_INTERVAL: 60]
+        CB_TIMEOUT[CIRCUIT_BREAKER_TIMEOUT: 30]
+    end
+    
+    subgraph "Load Balancer Configuration"
+        LB_ENABLED[LOAD_BALANCER_ENABLED: true]
+        LB_STRATEGY[LOAD_BALANCER_STRATEGY: round_robin]
+    end
+    
+    subgraph "Rate Limiting Configuration"
+        RL_ENABLED[RATE_LIMIT_ENABLED: true]
+        RL_REQUESTS[RATE_LIMIT_REQUESTS: 100]
+        RL_WINDOW[RATE_LIMIT_WINDOW: 1m]
+        RL_BURST[RATE_LIMIT_BURST: 10]
+    end
+    
+    PORT --> LOG_LEVEL
+    LOG_LEVEL --> LOG_FORMAT
+    LOG_FORMAT --> PRODUCT_ENABLED
+    PRODUCT_ENABLED --> PRODUCT_URLS
+    PRODUCT_URLS --> BASKET_ENABLED
+    BASKET_ENABLED --> BASKET_URLS
+    BASKET_URLS --> PAYMENT_ENABLED
+    PAYMENT_ENABLED --> PAYMENT_URLS
+    PAYMENT_URLS --> CB_ENABLED
+    CB_ENABLED --> CB_MAX_REQUESTS
+    CB_MAX_REQUESTS --> CB_INTERVAL
+    CB_INTERVAL --> CB_TIMEOUT
+    CB_TIMEOUT --> LB_ENABLED
+    LB_ENABLED --> LB_STRATEGY
+    LB_STRATEGY --> RL_ENABLED
+    RL_ENABLED --> RL_REQUESTS
+    RL_REQUESTS --> RL_WINDOW
+    RL_WINDOW --> RL_BURST
 ```
 
 ## Product Service Architecture
@@ -468,6 +662,10 @@ graph TB
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
 graph TB
+    subgraph "Gateway Services"
+        Gateway[fiberv2-gateway<br/>Port: 8083<br/>Load Balancer<br/>Circuit Breaker<br/>Rate Limiting]
+    end
+    
     subgraph "Application Services"
         ProductService[product-service<br/>Ports: 8080, 50050]
         BasketService[basket-service<br/>Ports: 8081, 50051]
@@ -486,6 +684,9 @@ graph TB
     end
     
     subgraph "Dependencies"
+        Gateway --> ProductService
+        Gateway --> BasketService
+        Gateway --> PaymentService
         ProductService --> PostgreSQL
         BasketService --> Redis
         PaymentService --> MariaDB
@@ -506,7 +707,14 @@ graph TB
         Go[Go 1.22+]
     end
     
-    subgraph "Frameworks"
+    subgraph "Gateway Frameworks"
+        Fiber[Fiber HTTP Framework]
+        FastHTTP[FastHTTP]
+        CircuitBreaker[Circuit Breaker]
+        LoadBalancer[Load Balancer]
+    end
+    
+    subgraph "Microservice Frameworks"
         Gin[Gin HTTP Framework]
         GRPC[gRPC Framework]
         Wire[Wire Dependency Injection]
@@ -533,11 +741,17 @@ graph TB
         CQRS[CQRS Pattern]
         CleanArch[Clean Architecture]
         EventDriven[Event-Driven Architecture]
+        GatewayPattern[API Gateway Pattern]
     end
     
+    Go --> Fiber
     Go --> Gin
     Go --> GRPC
     Go --> Wire
+    
+    Fiber --> FastHTTP
+    Fiber --> CircuitBreaker
+    Fiber --> LoadBalancer
     
     Gin --> PostgreSQL
     GRPC --> Redis
@@ -553,6 +767,7 @@ graph TB
     Prometheus --> CQRS
     Logrus --> CleanArch
     DDD --> EventDriven
+    EventDriven --> GatewayPattern
 ```
 
 ## Development Workflow
@@ -708,7 +923,7 @@ sequenceDiagram
 ## Service Communication Flow
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryText色': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
 graph TB
     subgraph "Client Layer"
         WebClient[Web Client]
@@ -717,45 +932,49 @@ graph TB
     end
     
     subgraph "API Gateway Layer"
-        LoadBalancer[Load Balancer]
-        RateLimiter[Rate Limiter]
-        AuthGateway[Auth Gateway]
+        FiberGateway[FiberV2 Gateway<br/>Port: 8083]
+        LoadBalancer[Load Balancer<br/>Round Robin<br/>Least Connections]
+        CircuitBreaker[Circuit Breaker<br/>Failure Detection<br/>Service Isolation]
+        RateLimiter[Rate Limiter<br/>Request Throttling<br/>Burst Control]
+        ReverseProxy[Reverse Proxy<br/>Request Forwarding<br/>Response Handling]
     end
     
     subgraph "Microservices Layer"
-        ProductService[Product Service]
-        BasketService[Basket Service]
-        PaymentService[Payment Service]
+        ProductService[Product Service<br/>Port: 8080]
+        BasketService[Basket Service<br/>Port: 8081]
+        PaymentService[Payment Service<br/>Port: 8082]
     end
     
     subgraph "Data Layer"
-        PostgreSQL[(PostgreSQL)]
-        Redis[(Redis)]
-        MariaDB[(MariaDB)]
+        PostgreSQL[(PostgreSQL<br/>Port: 5432)]
+        Redis[(Redis<br/>Port: 6379)]
+        MariaDB[(MariaDB<br/>Port: 3306)]
     end
     
     subgraph "Message Layer"
-        Kafka[Apache Kafka]
-        EventStore[Event Store]
+        Kafka[Apache Kafka<br/>Port: 9092]
+        Zookeeper[Zookeeper<br/>Port: 2181]
     end
     
-    WebClient --> LoadBalancer
-    MobileClient --> LoadBalancer
-    APIClient --> LoadBalancer
+    WebClient --> FiberGateway
+    MobileClient --> FiberGateway
+    APIClient --> FiberGateway
     
-    LoadBalancer --> RateLimiter
-    RateLimiter --> AuthGateway
+    FiberGateway --> LoadBalancer
+    LoadBalancer --> CircuitBreaker
+    CircuitBreaker --> RateLimiter
+    RateLimiter --> ReverseProxy
     
-    AuthGateway --> ProductService
-    AuthGateway --> BasketService
-    AuthGateway --> PaymentService
+    ReverseProxy --> ProductService
+    ReverseProxy --> BasketService
+    ReverseProxy --> PaymentService
     
     ProductService --> PostgreSQL
     BasketService --> Redis
     PaymentService --> MariaDB
     
     PaymentService --> Kafka
-    Kafka --> EventStore
+    Kafka --> Zookeeper
     
     BasketService --> ProductService
     PaymentService --> BasketService
