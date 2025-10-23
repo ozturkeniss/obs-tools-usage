@@ -4,6 +4,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/sony/gobreaker"
 )
 
 // Config holds the configuration for the API Gateway
