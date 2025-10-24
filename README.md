@@ -1796,3 +1796,187 @@ graph TB
     AlertRules --> NotificationChannels
     NotificationChannels --> EscalationPolicy
 ```
+
+## GitHub Bots and Automation
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Automation Bots"
+        Dependabot[Dependabot<br/>Dependency Updates<br/>Security Patches<br/>Version Management]
+        AutoCommit[Auto Commit Bot<br/>Documentation Updates<br/>Code Formatting<br/>Statistics Tracking]
+        AutoPR[Auto PR Bot<br/>Feature PRs<br/>Improvement PRs<br/>Documentation PRs]
+        AutoMerge[Auto Merge Bot<br/>Approved PRs<br/>Auto-generated PRs<br/>Status Checks]
+        AutoRelease[Auto Release Bot<br/>Patch Releases<br/>Minor Releases<br/>Major Releases]
+    end
+    
+    subgraph "Bot Triggers"
+        ScheduleTrigger[Scheduled Triggers<br/>Daily Updates<br/>Weekly Releases<br/>Monthly Maintenance]
+        EventTrigger[Event Triggers<br/>Code Push<br/>PR Creation<br/>Review Approval]
+        ManualTrigger[Manual Triggers<br/>Workflow Dispatch<br/>Admin Commands<br/>Emergency Actions]
+    end
+    
+    subgraph "Bot Activities"
+        CodeUpdates[Code Updates<br/>Formatting<br/>Import Organization<br/>Dependency Updates]
+        Documentation[Documentation<br/>README Updates<br/>API Documentation<br/>Changelog Updates]
+        PRManagement[PR Management<br/>Auto-creation<br/>Auto-merge<br/>Status Updates]
+        ReleaseManagement[Release Management<br/>Version Bumping<br/>Release Notes<br/>Tag Creation]
+    end
+    
+    subgraph "Bot Outputs"
+        Commits[Automated Commits<br/>Documentation Updates<br/>Code Improvements<br/>Statistics Updates]
+        PullRequests[Generated PRs<br/>Feature Requests<br/>Improvement Suggestions<br/>Documentation Updates]
+        Releases[Automated Releases<br/>Version Tags<br/>Release Notes<br/>Changelog Updates]
+        Notifications[Bot Notifications<br/>Status Updates<br/>Progress Reports<br/>Error Alerts]
+    end
+    
+    Dependabot --> CodeUpdates
+    AutoCommit --> Documentation
+    AutoPR --> PRManagement
+    AutoMerge --> PRManagement
+    AutoRelease --> ReleaseManagement
+    
+    ScheduleTrigger --> Dependabot
+    ScheduleTrigger --> AutoCommit
+    ScheduleTrigger --> AutoPR
+    ScheduleTrigger --> AutoRelease
+    
+    EventTrigger --> AutoMerge
+    EventTrigger --> AutoCommit
+    EventTrigger --> AutoPR
+    
+    ManualTrigger --> AutoRelease
+    ManualTrigger --> AutoPR
+    ManualTrigger --> AutoCommit
+    
+    CodeUpdates --> Commits
+    Documentation --> Commits
+    PRManagement --> PullRequests
+    ReleaseManagement --> Releases
+    
+    Commits --> Notifications
+    PullRequests --> Notifications
+    Releases --> Notifications
+```
+
+## Bot Workflow Schedules
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph LR
+    subgraph "Monday"
+        MonDeps[Dependabot<br/>Go Dependencies<br/>9:00 AM UTC]
+        MonCommit[Auto Commit<br/>Documentation<br/>8:00 AM UTC]
+    end
+    
+    subgraph "Tuesday"
+        TueDeps[Dependabot<br/>Docker Dependencies<br/>9:00 AM UTC]
+        TuePR[Auto PR<br/>Feature PR<br/>10:00 AM UTC]
+    end
+    
+    subgraph "Wednesday"
+        WedDeps[Dependabot<br/>GitHub Actions<br/>9:00 AM UTC]
+        WedPR[Auto PR<br/>Improvement PR<br/>10:00 AM UTC]
+    end
+    
+    subgraph "Thursday"
+        ThuDeps[Dependabot<br/>Terraform Dependencies<br/>9:00 AM UTC]
+        ThuPR[Auto PR<br/>Documentation PR<br/>10:00 AM UTC]
+    end
+    
+    subgraph "Friday"
+        FriDeps[Dependabot<br/>Ansible Dependencies<br/>9:00 AM UTC]
+        FriPR[Auto PR<br/>Refactor PR<br/>10:00 AM UTC]
+    end
+    
+    subgraph "Saturday"
+        SatDeps[Dependabot<br/>Helm Dependencies<br/>9:00 AM UTC]
+        SatCommit[Auto Commit<br/>Code Quality<br/>8:00 AM UTC]
+    end
+    
+    subgraph "Sunday"
+        SunRelease[Auto Release<br/>Weekly Release<br/>12:00 AM UTC]
+        SunCommit[Auto Commit<br/>Statistics<br/>8:00 AM UTC]
+    end
+    
+    MonDeps --> MonCommit
+    TueDeps --> TuePR
+    WedDeps --> WedPR
+    ThuDeps --> ThuPR
+    FriDeps --> FriPR
+    SatDeps --> SatCommit
+    SunRelease --> SunCommit
+```
+
+## Bot Configuration
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Dependabot Configuration"
+        DepConfig[Dependabot Config<br/>Package Ecosystems<br/>Update Schedules<br/>PR Limits]
+        GoDeps[Go Dependencies<br/>Weekly Updates<br/>Monday 9:00 AM<br/>10 PR Limit]
+        DockerDeps[Docker Dependencies<br/>Weekly Updates<br/>Tuesday 9:00 AM<br/>5 PR Limit]
+        ActionsDeps[GitHub Actions<br/>Weekly Updates<br/>Wednesday 9:00 AM<br/>5 PR Limit]
+        TerraformDeps[Terraform Dependencies<br/>Weekly Updates<br/>Thursday 9:00 AM<br/>3 PR Limit]
+        AnsibleDeps[Ansible Dependencies<br/>Weekly Updates<br/>Friday 9:00 AM<br/>3 PR Limit]
+        HelmDeps[Helm Dependencies<br/>Weekly Updates<br/>Saturday 9:00 AM<br/>3 PR Limit]
+    end
+    
+    subgraph "Auto Commit Bot"
+        CommitConfig[Auto Commit Config<br/>Daily Schedule<br/>Weekdays 8:00 AM<br/>Multiple Tasks]
+        DocsUpdate[Documentation Updates<br/>README Updates<br/>Changelog Updates<br/>Statistics Tracking]
+        CodeQuality[Code Quality<br/>gofmt Formatting<br/>goimports Organization<br/>go.mod Updates]
+        TestImprovements[Test Improvements<br/>Coverage Reports<br/>Test Documentation<br/>Performance Analysis]
+        CIImprovements[CI Improvements<br/>Action Updates<br/>Workflow Optimization<br/>Status Tracking]
+        ChoreTasks[Chore Tasks<br/>Metadata Updates<br/>Statistics Generation<br/>Project Maintenance]
+    end
+    
+    subgraph "Auto PR Bot"
+        PRConfig[Auto PR Config<br/>Daily Schedule<br/>Weekdays 10:00 AM<br/>Multiple PR Types]
+        FeaturePR[Feature PRs<br/>New Features<br/>Enhancements<br/>Improvements]
+        ImprovementPR[Improvement PRs<br/>Code Improvements<br/>Error Handling<br/>Performance]
+        DocumentationPR[Documentation PRs<br/>API Documentation<br/>Deployment Guides<br/>Troubleshooting]
+        RefactorPR[Refactor PRs<br/>Code Structure<br/>Readability<br/>Maintainability]
+    end
+    
+    subgraph "Auto Merge Bot"
+        MergeConfig[Auto Merge Config<br/>PR Events<br/>Review Events<br/>Status Checks]
+        AutoGeneratedPR[Auto-generated PRs<br/>Immediate Merge<br/>Status Check Pass<br/>Squash Merge]
+        ApprovedPR[Approved PRs<br/>Review Approval<br/>Status Check Pass<br/>Squash Merge]
+        StatusChecks[Status Checks<br/>CI/CD Pass<br/>Security Scan Pass<br/>Test Pass]
+    end
+    
+    subgraph "Auto Release Bot"
+        ReleaseConfig[Auto Release Config<br/>Weekly Schedule<br/>Sunday Midnight<br/>Manual Triggers]
+        PatchRelease[Patch Releases<br/>Bug Fixes<br/>Minor Updates<br/>Weekly Schedule]
+        MinorRelease[Minor Releases<br/>New Features<br/>Enhancements<br/>Manual Trigger]
+        MajorRelease[Major Releases<br/>Breaking Changes<br/>Major Features<br/>Manual Trigger]
+    end
+    
+    DepConfig --> GoDeps
+    DepConfig --> DockerDeps
+    DepConfig --> ActionsDeps
+    DepConfig --> TerraformDeps
+    DepConfig --> AnsibleDeps
+    DepConfig --> HelmDeps
+    
+    CommitConfig --> DocsUpdate
+    CommitConfig --> CodeQuality
+    CommitConfig --> TestImprovements
+    CommitConfig --> CIImprovements
+    CommitConfig --> ChoreTasks
+    
+    PRConfig --> FeaturePR
+    PRConfig --> ImprovementPR
+    PRConfig --> DocumentationPR
+    PRConfig --> RefactorPR
+    
+    MergeConfig --> AutoGeneratedPR
+    MergeConfig --> ApprovedPR
+    MergeConfig --> StatusChecks
+    
+    ReleaseConfig --> PatchRelease
+    ReleaseConfig --> MinorRelease
+    ReleaseConfig --> MajorRelease
+```
