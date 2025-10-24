@@ -1188,3 +1188,343 @@ graph TB
     StructuredLogs --> ServiceMonitor
     ServiceMonitor --> HPA
 ```
+
+## AWS Infrastructure Architecture
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "AWS Cloud"
+        subgraph "VPC Layer"
+            VPC[VPC<br/>10.0.0.0/16<br/>3 AZs]
+            PublicSubnets[Public Subnets<br/>Internet Gateway<br/>NAT Gateway]
+            PrivateSubnets[Private Subnets<br/>EKS Cluster<br/>RDS Instances]
+            IntraSubnets[Intra Subnets<br/>ElastiCache<br/>MSK Cluster]
+        end
+        
+        subgraph "EKS Cluster"
+            EKS[EKS Control Plane<br/>Kubernetes 1.28<br/>OIDC Provider]
+            NodeGroups[Managed Node Groups<br/>ON_DEMAND + SPOT<br/>Auto Scaling]
+            Addons[EKS Add-ons<br/>VPC CNI<br/>EBS CSI Driver<br/>CoreDNS]
+        end
+        
+        subgraph "Data Layer"
+            RDS[Amazon RDS<br/>PostgreSQL 15.4<br/>MariaDB 10.11<br/>Multi-AZ]
+            ElastiCache[ElastiCache Redis<br/>Cluster Mode<br/>Encryption at Rest]
+            MSK[Amazon MSK<br/>Kafka 3.5.1<br/>3 Brokers<br/>TLS Encryption]
+        end
+        
+        subgraph "Security Layer"
+            SecurityGroups[Security Groups<br/>EKS Cluster<br/>EKS Nodes<br/>RDS<br/>ElastiCache<br/>MSK]
+            IAMRoles[IAM Roles<br/>AWS Load Balancer Controller<br/>External DNS<br/>RDS Enhanced Monitoring]
+            KMS[KMS Keys<br/>RDS Encryption<br/>MSK Encryption<br/>EBS Encryption]
+        end
+        
+        subgraph "Monitoring Layer"
+            CloudWatch[CloudWatch<br/>Log Groups<br/>Metrics<br/>Alarms]
+            VPCFlowLogs[VPC Flow Logs<br/>Network Traffic<br/>Security Analysis]
+        end
+    end
+    
+    subgraph "External Access"
+        Internet[Internet]
+        LoadBalancer[AWS Load Balancer<br/>Application Load Balancer<br/>Network Load Balancer]
+    end
+    
+    Internet --> LoadBalancer
+    LoadBalancer --> PublicSubnets
+    PublicSubnets --> PrivateSubnets
+    PrivateSubnets --> IntraSubnets
+    
+    VPC --> PublicSubnets
+    VPC --> PrivateSubnets
+    VPC --> IntraSubnets
+    
+    PrivateSubnets --> EKS
+    EKS --> NodeGroups
+    EKS --> Addons
+    
+    PrivateSubnets --> RDS
+    IntraSubnets --> ElastiCache
+    IntraSubnets --> MSK
+    
+    EKS --> SecurityGroups
+    RDS --> SecurityGroups
+    ElastiCache --> SecurityGroups
+    MSK --> SecurityGroups
+    
+    EKS --> IAMRoles
+    RDS --> KMS
+    MSK --> KMS
+    
+    EKS --> CloudWatch
+    RDS --> CloudWatch
+    ElastiCache --> CloudWatch
+    MSK --> CloudWatch
+    VPC --> VPCFlowLogs
+```
+
+## Terraform Infrastructure Components
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Terraform Configuration"
+        MainTf[main.tf<br/>Provider Configuration<br/>Data Sources<br/>Local Values]
+        VariablesTf[variables.tf<br/>Input Variables<br/>Validation Rules<br/>Default Values]
+        OutputsTf[outputs.tf<br/>Resource Outputs<br/>Connection Info<br/>Configuration Data]
+    end
+    
+    subgraph "Infrastructure Modules"
+        VPCModule[VPC Module<br/>terraform-aws-modules/vpc/aws<br/>Subnets, Gateways<br/>Flow Logs]
+        EKSModule[EKS Module<br/>terraform-aws-modules/eks/aws<br/>Control Plane<br/>Node Groups<br/>Add-ons]
+    end
+    
+    subgraph "AWS Resources"
+        VPCResources[VPC Resources<br/>VPC, Subnets<br/>Internet Gateway<br/>NAT Gateway<br/>Route Tables]
+        EKSResources[EKS Resources<br/>EKS Cluster<br/>Node Groups<br/>Security Groups<br/>IAM Roles]
+        RDSResources[RDS Resources<br/>PostgreSQL Instance<br/>MariaDB Instance<br/>Subnet Groups<br/>Parameter Groups]
+        CacheResources[ElastiCache Resources<br/>Redis Cluster<br/>Subnet Groups<br/>Parameter Groups]
+        MSKResources[MSK Resources<br/>Kafka Cluster<br/>Configuration<br/>KMS Keys]
+    end
+    
+    subgraph "Security & Policies"
+        IAMPolicies[IAM Policies<br/>AWS Load Balancer Controller<br/>External DNS<br/>RDS Enhanced Monitoring]
+        SecurityGroups[Security Groups<br/>EKS Cluster<br/>EKS Nodes<br/>RDS<br/>ElastiCache<br/>MSK]
+        KMSKeys[KMS Keys<br/>RDS Encryption<br/>MSK Encryption<br/>EBS Encryption]
+    end
+    
+    subgraph "Monitoring & Logging"
+        CloudWatchLogs[CloudWatch Logs<br/>EKS Cluster Logs<br/>RDS Logs<br/>ElastiCache Logs<br/>MSK Logs]
+        VPCFlowLogs[VPC Flow Logs<br/>Network Traffic<br/>Security Analysis]
+    end
+    
+    MainTf --> VPCModule
+    MainTf --> EKSModule
+    VariablesTf --> VPCModule
+    VariablesTf --> EKSModule
+    
+    VPCModule --> VPCResources
+    EKSModule --> EKSResources
+    
+    VPCResources --> RDSResources
+    VPCResources --> CacheResources
+    VPCResources --> MSKResources
+    
+    EKSResources --> IAMPolicies
+    RDSResources --> SecurityGroups
+    CacheResources --> SecurityGroups
+    MSKResources --> SecurityGroups
+    
+    RDSResources --> KMSKeys
+    MSKResources --> KMSKeys
+    
+    EKSResources --> CloudWatchLogs
+    RDSResources --> CloudWatchLogs
+    CacheResources --> CloudWatchLogs
+    MSKResources --> CloudWatchLogs
+    VPCResources --> VPCFlowLogs
+```
+
+## Ansible Configuration Management
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Ansible Playbooks"
+        MainPlaybook[main.yml<br/>Main Playbook<br/>Host Configuration<br/>Role Execution]
+        K8sPlaybook[k8s-setup.yml<br/>Kubernetes Setup<br/>Helm Installation<br/>Add-on Configuration]
+        AppPlaybook[app-deploy.yml<br/>Application Deployment<br/>Helm Chart Installation<br/>Configuration Management]
+    end
+    
+    subgraph "Ansible Roles"
+        CommonRole[common<br/>System Updates<br/>Package Installation<br/>User Management]
+        DockerRole[docker<br/>Docker Installation<br/>Docker Compose<br/>Container Management]
+        K8sRole[kubernetes<br/>kubectl Installation<br/>kubeconfig Setup<br/>Cluster Access]
+        HelmRole[helm<br/>Helm Installation<br/>Repository Management<br/>Chart Operations]
+        MonitoringRole[monitoring<br/>Prometheus Setup<br/>Grafana Configuration<br/>Alert Rules]
+    end
+    
+    subgraph "Configuration Files"
+        Inventory[inventory.yml<br/>Host Definitions<br/>Group Variables<br/>Connection Settings]
+        GroupVars[group_vars/<br/>Environment Variables<br/>Secrets Management<br/>Configuration Values]
+        HostVars[host_vars/<br/>Host-specific Variables<br/>Individual Configurations]
+    end
+    
+    subgraph "Templates & Files"
+        ConfigTemplates[config_templates/<br/>Application Configs<br/>Service Definitions<br/>Environment Files]
+        Scripts[scripts/<br/>Deployment Scripts<br/>Health Checks<br/>Backup Scripts]
+        Secrets[secrets/<br/>Encrypted Variables<br/>API Keys<br/>Database Credentials]
+    end
+    
+    subgraph "Target Infrastructure"
+        EKSCluster[EKS Cluster<br/>Kubernetes Nodes<br/>Application Pods<br/>Services]
+        Databases[Databases<br/>RDS PostgreSQL<br/>RDS MariaDB<br/>ElastiCache Redis]
+        MessageBroker[Message Broker<br/>MSK Kafka<br/>Topics<br/>Producers/Consumers]
+        Monitoring[Monitoring Stack<br/>Prometheus<br/>Grafana<br/>AlertManager]
+    end
+    
+    MainPlaybook --> CommonRole
+    MainPlaybook --> DockerRole
+    K8sPlaybook --> K8sRole
+    K8sPlaybook --> HelmRole
+    AppPlaybook --> MonitoringRole
+    
+    Inventory --> GroupVars
+    Inventory --> HostVars
+    GroupVars --> ConfigTemplates
+    HostVars --> Scripts
+    ConfigTemplates --> Secrets
+    
+    CommonRole --> EKSCluster
+    DockerRole --> EKSCluster
+    K8sRole --> EKSCluster
+    HelmRole --> EKSCluster
+    MonitoringRole --> Monitoring
+    
+    EKSCluster --> Databases
+    EKSCluster --> MessageBroker
+    EKSCluster --> Monitoring
+```
+
+## Infrastructure Deployment Flow
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph LR
+    subgraph "Phase 1: Infrastructure"
+        TerraformInit[terraform init<br/>Provider Setup<br/>Module Download]
+        TerraformPlan[terraform plan<br/>Resource Planning<br/>Change Detection]
+        TerraformApply[terraform apply<br/>Resource Creation<br/>State Management]
+    end
+    
+    subgraph "Phase 2: Configuration"
+        AnsibleInventory[ansible-inventory<br/>Host Discovery<br/>Group Assignment]
+        AnsiblePlaybook[ansible-playbook<br/>Configuration Management<br/>Role Execution]
+        AnsibleVerify[ansible-verify<br/>Configuration Validation<br/>Health Checks]
+    end
+    
+    subgraph "Phase 3: Application"
+        HelmRepo[helm repo add<br/>Repository Setup<br/>Chart Discovery]
+        HelmInstall[helm install<br/>Application Deployment<br/>Resource Creation]
+        HelmUpgrade[helm upgrade<br/>Application Updates<br/>Rolling Deployments]
+    end
+    
+    subgraph "Phase 4: Monitoring"
+        PrometheusSetup[Prometheus Setup<br/>Metrics Collection<br/>Service Discovery]
+        GrafanaSetup[Grafana Setup<br/>Dashboard Creation<br/>Alert Configuration]
+        LoggingSetup[Logging Setup<br/>Centralized Logs<br/>Log Aggregation]
+    end
+    
+    TerraformInit --> TerraformPlan
+    TerraformPlan --> TerraformApply
+    TerraformApply --> AnsibleInventory
+    
+    AnsibleInventory --> AnsiblePlaybook
+    AnsiblePlaybook --> AnsibleVerify
+    AnsibleVerify --> HelmRepo
+    
+    HelmRepo --> HelmInstall
+    HelmInstall --> HelmUpgrade
+    HelmUpgrade --> PrometheusSetup
+    
+    PrometheusSetup --> GrafanaSetup
+    GrafanaSetup --> LoggingSetup
+```
+
+## Environment-Specific Configurations
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Development Environment"
+        DevTerraform[terraform.tfvars.dev<br/>Small Instance Types<br/>Single AZ<br/>Minimal Resources]
+        DevAnsible[group_vars/dev/<br/>Debug Logging<br/>Development Tools<br/>Local Access]
+        DevHelm[values-dev.yaml<br/>Development Settings<br/>Debug Mode<br/>Local Storage]
+    end
+    
+    subgraph "Staging Environment"
+        StagingTerraform[terraform.tfvars.staging<br/>Medium Instance Types<br/>Multi-AZ<br/>Production-like]
+        StagingAnsible[group_vars/staging/<br/>Production Config<br/>Security Hardening<br/>Monitoring]
+        StagingHelm[values-staging.yaml<br/>Staging Settings<br/>Production-like Config<br/>External Storage]
+    end
+    
+    subgraph "Production Environment"
+        ProdTerraform[terraform.tfvars.prod<br/>Large Instance Types<br/>Multi-AZ<br/>High Availability]
+        ProdAnsible[group_vars/prod/<br/>Production Config<br/>Security Hardening<br/>Compliance]
+        ProdHelm[values-prod.yaml<br/>Production Settings<br/>High Availability<br/>External Storage]
+    end
+    
+    subgraph "Configuration Management"
+        TerraformVars[terraform.tfvars<br/>Environment Variables<br/>Resource Sizing<br/>Feature Flags]
+        AnsibleVars[group_vars/<br/>Application Config<br/>Secrets Management<br/>Environment-specific]
+        HelmValues[values.yaml<br/>Application Settings<br/>Resource Limits<br/>Scaling Config]
+    end
+    
+    DevTerraform --> TerraformVars
+    StagingTerraform --> TerraformVars
+    ProdTerraform --> TerraformVars
+    
+    DevAnsible --> AnsibleVars
+    StagingAnsible --> AnsibleVars
+    ProdAnsible --> AnsibleVars
+    
+    DevHelm --> HelmValues
+    StagingHelm --> HelmValues
+    ProdHelm --> HelmValues
+```
+
+## Security and Compliance
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Network Security"
+        VPCFlowLogs[VPC Flow Logs<br/>Network Traffic Analysis<br/>Security Monitoring]
+        SecurityGroups[Security Groups<br/>Port-based Access Control<br/>Source/Destination Rules]
+        NACLs[Network ACLs<br/>Subnet-level Security<br/>Traffic Filtering]
+    end
+    
+    subgraph "Identity and Access"
+        IAMRoles[IAM Roles<br/>Service Accounts<br/>Least Privilege Access]
+        RBAC[Kubernetes RBAC<br/>Role-based Access<br/>Service Account Permissions]
+        OIDC[OIDC Provider<br/>Identity Federation<br/>Token-based Access]
+    end
+    
+    subgraph "Data Protection"
+        EncryptionAtRest[Encryption at Rest<br/>RDS Encryption<br/>EBS Encryption<br/>S3 Encryption]
+        EncryptionInTransit[Encryption in Transit<br/>TLS/SSL<br/>mTLS<br/>Certificate Management]
+        SecretsManagement[Secrets Management<br/>AWS Secrets Manager<br/>Kubernetes Secrets<br/>Encrypted Variables]
+    end
+    
+    subgraph "Monitoring and Compliance"
+        CloudTrail[AWS CloudTrail<br/>API Activity Logging<br/>Audit Trail]
+        Config[AWS Config<br/>Resource Compliance<br/>Configuration Drift]
+        GuardDuty[Amazon GuardDuty<br/>Threat Detection<br/>Security Analysis]
+    end
+    
+    subgraph "Application Security"
+        PodSecurity[Pod Security Standards<br/>Non-root Containers<br/>Read-only Filesystem]
+        NetworkPolicies[Network Policies<br/>Traffic Isolation<br/>Micro-segmentation]
+        ImageSecurity[Container Image Security<br/>Vulnerability Scanning<br/>Image Signing]
+    end
+    
+    VPCFlowLogs --> SecurityGroups
+    SecurityGroups --> NACLs
+    NACLs --> IAMRoles
+    
+    IAMRoles --> RBAC
+    RBAC --> OIDC
+    OIDC --> EncryptionAtRest
+    
+    EncryptionAtRest --> EncryptionInTransit
+    EncryptionInTransit --> SecretsManagement
+    SecretsManagement --> CloudTrail
+    
+    CloudTrail --> Config
+    Config --> GuardDuty
+    GuardDuty --> PodSecurity
+    
+    PodSecurity --> NetworkPolicies
+    NetworkPolicies --> ImageSecurity
+```
