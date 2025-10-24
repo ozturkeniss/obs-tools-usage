@@ -1,0 +1,79 @@
+# OBS Tools Usage - Terraform Variables Example
+# Copy this file to terraform.tfvars and customize the values
+
+# Project Configuration
+project_name = "obs-tools-usage"
+environment  = "prod"  # dev, staging, prod
+
+# AWS Configuration
+aws_region = "us-west-2"
+
+# VPC Configuration
+vpc_cidr = "10.0.0.0/16"
+enable_nat_gateway = true
+enable_vpn_gateway = false
+
+# EKS Configuration
+cluster_version = "1.28"
+cluster_endpoint_private_access = true
+cluster_endpoint_public_access = true
+
+# Node Groups
+node_groups = {
+  general = {
+    instance_types = ["t3.medium", "t3.large"]
+    capacity_type  = "ON_DEMAND"
+    min_size       = 2
+    max_size       = 10
+    desired_size   = 3
+    disk_size      = 50
+    ami_type       = "AL2_x86_64"
+  }
+  spot = {
+    instance_types = ["t3.medium", "t3.large", "t3.xlarge"]
+    capacity_type  = "SPOT"
+    min_size       = 0
+    max_size       = 20
+    desired_size   = 2
+    disk_size      = 50
+    ami_type       = "AL2_x86_64"
+  }
+}
+
+# RDS Configuration
+rds_instance_class = "db.t3.micro"
+rds_allocated_storage = 20
+rds_max_allocated_storage = 100
+
+# ElastiCache Configuration
+elasticache_node_type = "cache.t3.micro"
+elasticache_num_cache_nodes = 1
+
+# MSK Configuration
+msk_instance_type = "kafka.t3.small"
+msk_number_of_broker_nodes = 3
+
+# Monitoring
+enable_cloudwatch_logs = true
+enable_cloudwatch_metrics = true
+
+# Security
+allowed_cidr_blocks = ["0.0.0.0/0"]
+
+# Add-ons
+enable_aws_load_balancer_controller = true
+enable_external_dns = true
+enable_cert_manager = true
+
+# Application Configuration
+app_namespace = "obs-tools-usage"
+app_replicas = {
+  gateway = 3
+  product = 2
+  basket  = 2
+  payment = 2
+}
+
+# Domain Configuration
+domain_name = "obstools.local"
+certificate_arn = ""  # Set your ACM certificate ARN here
