@@ -124,6 +124,49 @@ services:
       initialDelaySeconds: 5
       periodSeconds: 5
 
+  notification:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: obstools/notification-service
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    service:
+      type: ClusterIP
+      port: 8084
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+    env:
+      ENVIRONMENT: production
+      PORT: "8084"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: notification_service
+      DB_SSL_MODE: disable
+      KAFKA_BROKERS: kafka:9092
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      LOG_OUTPUT: console
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8084
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 8084
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
   gateway:
     enabled: true
     replicaCount: 3
@@ -152,6 +195,7 @@ services:
       PRODUCT_SERVICE_ENABLED: "true"
       BASKET_SERVICE_ENABLED: "true"
       PAYMENT_SERVICE_ENABLED: "true"
+      NOTIFICATION_SERVICE_ENABLED: "true"
       CIRCUIT_BREAKER_ENABLED: "true"
       LOAD_BALANCER_ENABLED: "true"
       LOAD_BALANCER_STRATEGY: "round_robin"
