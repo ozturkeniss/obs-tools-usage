@@ -1,0 +1,21 @@
+{{- if .Values.services.gateway.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "obs-tools-usage.fullname" . }}-gateway
+  labels:
+    {{- include "obs-tools-usage.serviceLabels" (dict "serviceName" "gateway" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 4 }}
+  {{- with .Values.services.gateway.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.services.gateway.service.type }}
+  ports:
+    - port: {{ .Values.services.gateway.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "obs-tools-usage.serviceSelectorLabels" (dict "serviceName" "gateway" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 4 }}
+{{- end }}
