@@ -1,0 +1,71 @@
+---
+# OBS Tools Usage - Application Deployment Playbook
+# This playbook deploys the microservices application using Helm
+
+- name: "Application Deployment - EKS Cluster"
+  hosts: eks_nodes
+  become: false
+  gather_facts: false
+  
+  pre_tasks:
+    - name: "Verify cluster access"
+      command: "kubectl cluster-info"
+      register: cluster_info
+      failed_when: cluster_info.rc != 0
+    
+    - name: "Create application namespace"
+      kubernetes.core.k8s:
+        name: "{{ app_namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+      register: namespace_result
+    
+    - name: "Wait for namespace to be ready"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: "{{ app_namespace }}"
+      register: namespace_info
+      until: namespace_info.resources | length > 0
+      retries: 10
+      delay: 5
+
+  roles:
+    - role: obs-tools-usage-app
+      tags: [application, microservices]
+    
+    - role: monitoring-stack
+      tags: [monitoring, prometheus, grafana]
+      when: monitoring_enabled | default(true)
+    
+    - role: backup-config
+      tags: [backup, configuration]
+      when: backup_enabled | default(false)
+
+  post_tasks:
+    - name: "Wait for application pods to be ready"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ app_namespace }}"
+        label_selectors:
+          - "app.kubernetes.io/name=obs-tools-usage"
+      register: app_pods
+      until: app_pods.resources | length > 0
+      retries: 30
+      delay: 10
+    
+    - name: "Verify application health"
+      uri:
+        url: "http://{{ app_endpoint }}/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      failed_when: health_check.status != 200
+    
+    - name: "Display deployment information"
+      debug:
+        msg: "Application deployment completed successfully"
+        app_endpoint: "{{ app_endpoint }}"
+        namespace: "{{ app_namespace }}"
