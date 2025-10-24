@@ -113,6 +113,21 @@ GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/payment-
 print_status "Building Payment Service for macOS ARM64..."
 GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/payment-service-darwin-arm64 cmd/payment/main.go
 
+print_status "Building Notification Service for Linux AMD64..."
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/notification-service-linux-amd64 cmd/notification/main.go
+
+print_status "Building Notification Service for Linux ARM64..."
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/notification-service-linux-arm64 cmd/notification/main.go
+
+print_status "Building Notification Service for Windows AMD64..."
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/notification-service-windows-amd64.exe cmd/notification/main.go
+
+print_status "Building Notification Service for macOS AMD64..."
+GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/notification-service-darwin-amd64 cmd/notification/main.go
+
+print_status "Building Notification Service for macOS ARM64..."
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/notification-service-darwin-arm64 cmd/notification/main.go
+
 print_status "Building Gateway Service for Linux AMD64..."
 cd fiberv2-gateway
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/gateway-linux-amd64 cmd/main.go
@@ -136,11 +151,13 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         ln -sf product-service-linux-amd64 bin/product-service
         ln -sf basket-service-linux-amd64 bin/basket-service
         ln -sf payment-service-linux-amd64 bin/payment-service
+        ln -sf notification-service-linux-amd64 bin/notification-service
         ln -sf gateway-linux-amd64 fiberv2-gateway/bin/gateway
     elif [[ $(uname -m) == "aarch64" ]]; then
         ln -sf product-service-linux-arm64 bin/product-service
         ln -sf basket-service-linux-arm64 bin/basket-service
         ln -sf payment-service-linux-arm64 bin/payment-service
+        ln -sf notification-service-linux-arm64 bin/notification-service
         ln -sf gateway-linux-arm64 fiberv2-gateway/bin/gateway
     fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
@@ -148,11 +165,13 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
         ln -sf product-service-darwin-amd64 bin/product-service
         ln -sf basket-service-darwin-amd64 bin/basket-service
         ln -sf payment-service-darwin-amd64 bin/payment-service
+        ln -sf notification-service-darwin-amd64 bin/notification-service
         ln -sf gateway-darwin-amd64 fiberv2-gateway/bin/gateway
     elif [[ $(uname -m) == "arm64" ]]; then
         ln -sf product-service-darwin-arm64 bin/product-service
         ln -sf basket-service-darwin-arm64 bin/basket-service
         ln -sf payment-service-darwin-arm64 bin/payment-service
+        ln -sf notification-service-darwin-arm64 bin/notification-service
         ln -sf gateway-darwin-arm64 fiberv2-gateway/bin/gateway
     fi
 fi
