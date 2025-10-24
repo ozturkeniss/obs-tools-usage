@@ -1,0 +1,145 @@
+name: Performance Testing
+
+on:
+  schedule:
+    - cron: '0 4 * * 0'  # Weekly on Sunday at 4 AM
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+
+jobs:
+  # Load Testing
+  load-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up k6
+      run: |
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+    
+    - name: Get application endpoint
+      id: get-endpoint
+      run: |
+        if [ "${{ github.event.inputs.environment || 'staging' }}" = "development" ]; then
+          echo "endpoint=http://dev.obstools.local" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event.inputs.environment || 'staging' }}" = "staging" ]; then
+          echo "endpoint=http://staging.obstools.local" >> $GITHUB_OUTPUT
+        else
+          echo "endpoint=https://obstools.local" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Run load tests
+      run: |
+        k6 run --out json=results.json scripts/load-test.js
+      env:
+        BASE_URL: ${{ steps.get-endpoint.outputs.endpoint }}
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: k6-results
+        path: results.json
+
+  # Stress Testing
+  stress-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up k6
+      run: |
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+    
+    - name: Run stress tests
+      run: |
+        k6 run scripts/stress-test.js
+      env:
+        BASE_URL: ${{ github.event.inputs.environment == 'production' && 'https://obstools.local' || 'http://staging.obstools.local' }}
+
+  # Database Performance Testing
+  database-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+    
+    - name: Install PostgreSQL client
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client
+    
+    - name: Run database performance tests
+      run: |
+        # Add database performance tests here
+        echo "Running database performance tests..."
+
+  # Memory and CPU Profiling
+  profiling:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+    
+    - name: Run CPU profiling
+      run: |
+        go test -cpuprofile=cpu.prof -bench=. ./...
+        go tool pprof -text cpu.prof > cpu-analysis.txt
+    
+    - name: Run memory profiling
+      run: |
+        go test -memprofile=mem.prof -bench=. ./...
+        go tool pprof -text mem.prof > mem-analysis.txt
+    
+    - name: Upload profiling results
+      uses: actions/upload-artifact@v3
+      with:
+        name: profiling-results
+        path: |
+          cpu-analysis.txt
+          mem-analysis.txt
+          cpu.prof
+          mem.prof
