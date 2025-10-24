@@ -13,6 +13,7 @@ graph TB
         Product[Product Service<br/>HTTP: 8080<br/>gRPC: 50050]
         Basket[Basket Service<br/>HTTP: 8081<br/>gRPC: 50051]
         Payment[Payment Service<br/>HTTP: 8082<br/>gRPC: 50052]
+        Notification[Notification Service<br/>HTTP: 8084<br/>Event-Driven]
     end
     
     subgraph "Data Storage"
@@ -37,16 +38,19 @@ graph TB
     Gateway --> Product
     Gateway --> Basket
     Gateway --> Payment
+    Gateway --> Notification
     
     Product --> PostgreSQL
     Basket --> Redis
     Payment --> MariaDB
+    Notification --> PostgreSQL
     
     Basket --> Product
     Payment --> Basket
     Payment --> Product
     
     Payment --> Kafka
+    Kafka --> Notification
     Kafka --> Zookeeper
 ```
 
@@ -150,6 +154,7 @@ graph LR
         ProductAPI[GET /api/products/*<br/>Product Service Proxy]
         BasketAPI[GET /api/baskets/*<br/>Basket Service Proxy]
         PaymentAPI[GET /api/payments/*<br/>Payment Service Proxy]
+        NotificationAPI[GET /api/notifications/*<br/>Notification Service Proxy]
     end
     
     subgraph "Admin Endpoints"
@@ -173,6 +178,7 @@ graph LR
     ProductAPI --> GatewayStatus
     BasketAPI --> ServiceStatus
     PaymentAPI --> LoadBalancerStats
+    NotificationAPI --> CircuitBreakerStats
     GatewayStatus --> CircuitBreakerStats
     ServiceStatus --> HealthCheck
     LoadBalancerStats --> DetailedHealth
@@ -199,6 +205,8 @@ graph TB
         BASKET_URLS[BASKET_SERVICE_URLS: http://basket-service:8081]
         PAYMENT_ENABLED[PAYMENT_SERVICE_ENABLED: true]
         PAYMENT_URLS[PAYMENT_SERVICE_URLS: http://payment-service:8082]
+        NOTIFICATION_ENABLED[NOTIFICATION_SERVICE_ENABLED: true]
+        NOTIFICATION_URLS[NOTIFICATION_SERVICE_URLS: http://notification-service:8084]
     end
     
     subgraph "Circuit Breaker Configuration"
@@ -228,7 +236,9 @@ graph TB
     BASKET_ENABLED --> BASKET_URLS
     BASKET_URLS --> PAYMENT_ENABLED
     PAYMENT_ENABLED --> PAYMENT_URLS
-    PAYMENT_URLS --> CB_ENABLED
+    PAYMENT_URLS --> NOTIFICATION_ENABLED
+    NOTIFICATION_ENABLED --> NOTIFICATION_URLS
+    NOTIFICATION_URLS --> CB_ENABLED
     CB_ENABLED --> CB_MAX_REQUESTS
     CB_MAX_REQUESTS --> CB_INTERVAL
     CB_INTERVAL --> CB_TIMEOUT
@@ -609,6 +619,103 @@ graph TB
     BASKET_SERVICE_URL --> PRODUCT_SERVICE_URL
 ```
 
+## Notification Service API Endpoints
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph LR
+    subgraph "Notification Management"
+        CREATE_NOTIFICATION[POST /notifications<br/>Create notification]
+        GET_NOTIFICATION[GET /notifications/{id}<br/>Get notification]
+        UPDATE_NOTIFICATION[PUT /notifications/{id}<br/>Update notification]
+        DELETE_NOTIFICATION[DELETE /notifications/{id}<br/>Delete notification]
+        SEND_NOTIFICATION[POST /notifications/{id}/send<br/>Send notification]
+    end
+    
+    subgraph "Notification Actions"
+        MARK_AS_READ[POST /notifications/{id}/read<br/>Mark as read]
+        MARK_ALL_READ[POST /notifications/read-all<br/>Mark all as read]
+        RETRY_NOTIFICATION[POST /notifications/{id}/retry<br/>Retry failed notification]
+    end
+    
+    subgraph "Bulk Operations"
+        BULK_CREATE[POST /notifications/bulk<br/>Bulk create notifications]
+        SCHEDULE_NOTIFICATION[POST /notifications/schedule<br/>Schedule notification]
+        CLEANUP_EXPIRED[POST /notifications/cleanup<br/>Cleanup expired notifications]
+    end
+    
+    subgraph "Query Operations"
+        GET_NOTIFICATIONS[GET /notifications<br/>Get notifications]
+        GET_UNREAD[GET /notifications/unread<br/>Get unread notifications]
+        GET_STATS[GET /notifications/stats<br/>Get notification statistics]
+    end
+    
+    subgraph "Health Check"
+        HEALTH[GET /health<br/>Health check]
+        METRICS[GET /metrics<br/>Prometheus metrics]
+    end
+    
+    CREATE_NOTIFICATION --> GET_NOTIFICATION
+    GET_NOTIFICATION --> UPDATE_NOTIFICATION
+    UPDATE_NOTIFICATION --> DELETE_NOTIFICATION
+    DELETE_NOTIFICATION --> SEND_NOTIFICATION
+    SEND_NOTIFICATION --> MARK_AS_READ
+    MARK_AS_READ --> MARK_ALL_READ
+    MARK_ALL_READ --> RETRY_NOTIFICATION
+    RETRY_NOTIFICATION --> BULK_CREATE
+    BULK_CREATE --> SCHEDULE_NOTIFICATION
+    SCHEDULE_NOTIFICATION --> CLEANUP_EXPIRED
+    CLEANUP_EXPIRED --> GET_NOTIFICATIONS
+    GET_NOTIFICATIONS --> GET_UNREAD
+    GET_UNREAD --> GET_STATS
+    GET_STATS --> HEALTH
+    HEALTH --> METRICS
+```
+
+## Notification Service Environment Variables
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Server Configuration"
+        PORT[PORT: 8084]
+        LOG_LEVEL[LOG_LEVEL: info]
+        LOG_FORMAT[LOG_FORMAT: json]
+    end
+    
+    subgraph "Database Configuration"
+        DB_HOST[DB_HOST: localhost]
+        DB_PORT[DB_PORT: 5432]
+        DB_USER[DB_USER: postgres]
+        DB_PASSWORD[DB_PASSWORD: password]
+        DB_NAME[DB_NAME: notification_service]
+        DB_SSL_MODE[DB_SSL_MODE: disable]
+    end
+    
+    subgraph "Kafka Configuration"
+        KAFKA_BROKERS[KAFKA_BROKERS: localhost:9092]
+    end
+    
+    subgraph "Notification Configuration"
+        DEFAULT_RETRY_ATTEMPTS[DEFAULT_RETRY_ATTEMPTS: 3]
+        NOTIFICATION_TTL[NOTIFICATION_TTL: 24h]
+        CLEANUP_INTERVAL[CLEANUP_INTERVAL: 1h]
+    end
+    
+    PORT --> LOG_LEVEL
+    LOG_LEVEL --> LOG_FORMAT
+    LOG_FORMAT --> DB_HOST
+    DB_HOST --> DB_PORT
+    DB_PORT --> DB_USER
+    DB_USER --> DB_PASSWORD
+    DB_PASSWORD --> DB_NAME
+    DB_NAME --> DB_SSL_MODE
+    DB_SSL_MODE --> KAFKA_BROKERS
+    KAFKA_BROKERS --> DEFAULT_RETRY_ATTEMPTS
+    DEFAULT_RETRY_ATTEMPTS --> NOTIFICATION_TTL
+    NOTIFICATION_TTL --> CLEANUP_INTERVAL
+```
+
 ## Event-Driven Architecture with Kafka
 
 ```mermaid
@@ -616,12 +723,20 @@ graph TB
 graph TB
     subgraph "Event Publishers"
         PaymentService[Payment Service]
+        ProductService[Product Service]
+        BasketService[Basket Service]
+        UserService[User Service]
+        OrderService[Order Service]
     end
     
     subgraph "Kafka Topics"
         PaymentEvents[payment-events]
         StockEvents[stock-events]
         BasketEvents[basket-events]
+        UserEvents[user-events]
+        OrderEvents[order-events]
+        SystemEvents[system-events]
+        MarketingEvents[marketing-events]
     end
     
     subgraph "Event Types"
@@ -629,7 +744,15 @@ graph TB
         PaymentFailed[Payment Failed]
         PaymentRefunded[Payment Refunded]
         StockUpdated[Stock Updated]
+        StockLow[Stock Low]
+        StockOut[Stock Out]
         BasketCleared[Basket Cleared]
+        BasketAbandoned[Basket Abandoned]
+        UserRegistered[User Registered]
+        OrderCreated[Order Created]
+        OrderShipped[Order Shipped]
+        SystemMaintenance[System Maintenance]
+        PromotionCreated[Promotion Created]
     end
     
     subgraph "Event Consumers"
@@ -639,22 +762,43 @@ graph TB
     end
     
     PaymentService --> PaymentEvents
-    PaymentService --> StockEvents
-    PaymentService --> BasketEvents
+    ProductService --> StockEvents
+    BasketService --> BasketEvents
+    UserService --> UserEvents
+    OrderService --> OrderEvents
+    SystemService --> SystemEvents
+    MarketingService --> MarketingEvents
     
     PaymentEvents --> PaymentCompleted
     PaymentEvents --> PaymentFailed
     PaymentEvents --> PaymentRefunded
     
     StockEvents --> StockUpdated
-    BasketEvents --> BasketCleared
+    StockEvents --> StockLow
+    StockEvents --> StockOut
     
-    PaymentCompleted --> ProductService
+    BasketEvents --> BasketCleared
+    BasketEvents --> BasketAbandoned
+    
+    UserEvents --> UserRegistered
+    OrderEvents --> OrderCreated
+    OrderEvents --> OrderShipped
+    SystemEvents --> SystemMaintenance
+    MarketingEvents --> PromotionCreated
+    
     PaymentCompleted --> NotificationService
     PaymentFailed --> NotificationService
     PaymentRefunded --> NotificationService
-    StockUpdated --> ProductService
-    BasketCleared --> BasketService
+    StockUpdated --> NotificationService
+    StockLow --> NotificationService
+    StockOut --> NotificationService
+    BasketCleared --> NotificationService
+    BasketAbandoned --> NotificationService
+    UserRegistered --> NotificationService
+    OrderCreated --> NotificationService
+    OrderShipped --> NotificationService
+    SystemMaintenance --> NotificationService
+    PromotionCreated --> NotificationService
 ```
 
 ## Docker Services Configuration
@@ -670,6 +814,7 @@ graph TB
         ProductService[product-service<br/>Ports: 8080, 50050]
         BasketService[basket-service<br/>Ports: 8081, 50051]
         PaymentService[payment-service<br/>Ports: 8082, 50052]
+        NotificationService[notification-service<br/>Port: 8084<br/>Event-Driven]
     end
     
     subgraph "Database Services"
@@ -687,13 +832,16 @@ graph TB
         Gateway --> ProductService
         Gateway --> BasketService
         Gateway --> PaymentService
+        Gateway --> NotificationService
         ProductService --> PostgreSQL
         BasketService --> Redis
         PaymentService --> MariaDB
+        NotificationService --> PostgreSQL
         BasketService --> ProductService
         PaymentService --> BasketService
         PaymentService --> ProductService
         PaymentService --> Kafka
+        Kafka --> NotificationService
         Kafka --> Zookeeper
     end
 ```
