@@ -1,0 +1,294 @@
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: obstools
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Service configuration
+services:
+  product:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: obstools/product-service
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    service:
+      type: ClusterIP
+      port: 8080
+      grpcPort: 50050
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+    env:
+      ENVIRONMENT: production
+      PORT: "8080"
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      LOG_OUTPUT: console
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  basket:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: obstools/basket-service
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    service:
+      type: ClusterIP
+      port: 8081
+      grpcPort: 50051
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+    env:
+      ENVIRONMENT: production
+      PORT: "8081"
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      LOG_OUTPUT: console
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8081
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 8081
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  payment:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: obstools/payment-service
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    service:
+      type: ClusterIP
+      port: 8082
+      grpcPort: 50052
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+    env:
+      ENVIRONMENT: production
+      PORT: "8082"
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      LOG_OUTPUT: console
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8082
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 8082
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  gateway:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: obstools/fiberv2-gateway
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    service:
+      type: LoadBalancer
+      port: 8080
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+    env:
+      ENVIRONMENT: production
+      PORT: "8080"
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      LOG_OUTPUT: console
+      PRODUCT_SERVICE_ENABLED: "true"
+      BASKET_SERVICE_ENABLED: "true"
+      PAYMENT_SERVICE_ENABLED: "true"
+      CIRCUIT_BREAKER_ENABLED: "true"
+      LOAD_BALANCER_ENABLED: "true"
+      LOAD_BALANCER_STRATEGY: "round_robin"
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_REQUESTS: "1000"
+      RATE_LIMIT_WINDOW: "1m"
+      RATE_LIMIT_BURST: "100"
+      HEALTH_CHECK_ENABLED: "true"
+      METRICS_ENABLED: "true"
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+# Database configurations
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "secure_password"
+    database: "product_service"
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 4Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+mariadb:
+  enabled: true
+  auth:
+    rootPassword: "secure_password"
+    database: "payment_service"
+    username: "payment"
+    password: "secure_password"
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+# Kafka configuration
+kafka:
+  enabled: true
+  replicaCount: 3
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+        memory: 512Mi
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+  hosts:
+    - host: api.obstools.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+# Security
+security:
+  podSecurityContext:
+    fsGroup: 1000
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+# Network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 50050
