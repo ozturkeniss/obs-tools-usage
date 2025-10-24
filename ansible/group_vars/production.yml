@@ -1,0 +1,131 @@
+---
+# Production Environment Variables
+# These variables are specific to the production environment
+
+environment: "prod"
+log_level: "warn"
+monitoring_enabled: true
+backup_enabled: true
+security_hardening: true
+
+# Production-specific configurations
+debug_mode: false
+verbose_logging: false
+development_tools: false
+
+# Resource limits for production
+resource_limits:
+  cpu: "2000m"
+  memory: "4Gi"
+  storage: "50Gi"
+
+resource_requests:
+  cpu: "500m"
+  memory: "1Gi"
+  storage: "10Gi"
+
+# Scaling for production
+hpa_min_replicas: 3
+hpa_max_replicas: 100
+
+# Application replicas for production
+app_replicas:
+  gateway: 5
+  product: 3
+  basket: 3
+  payment: 3
+
+# Database configuration for production
+postgresql_instance_class: "db.r5.large"
+mariadb_instance_class: "db.r5.large"
+elasticache_node_type: "cache.r5.large"
+msk_instance_type: "kafka.m5.large"
+
+# Monitoring configuration for production
+prometheus_retention: "30d"
+grafana_admin_password: "{{ vault_grafana_password }}"
+alerting_enabled: true
+
+# Backup configuration for production
+backup_retention_days: 30
+backup_schedule: "0 2 * * *"
+
+# Security configuration for production
+firewall_rules:
+  - port: 22
+    source: "10.0.0.0/8"
+    protocol: "tcp"
+  - port: 80
+    source: "0.0.0.0/0"
+    protocol: "tcp"
+  - port: 443
+    source: "0.0.0.0/0"
+    protocol: "tcp"
+
+# SSL configuration for production
+ssl_enabled: true
+certificate_validation: true
+hsts_enabled: true
+
+# Logging configuration for production
+log_retention_days: 90
+log_level: "warn"
+structured_logging: true
+log_aggregation: true
+
+# Network configuration for production
+dns_servers:
+  - "169.254.169.253"
+  - "8.8.8.8"
+  - "8.8.4.4"
+
+# Kubernetes configuration for production
+k8s_addons:
+  - "coredns"
+  - "kube-proxy"
+  - "vpc-cni"
+  - "aws-ebs-csi-driver"
+  - "aws-load-balancer-controller"
+  - "external-dns"
+  - "cert-manager"
+
+# Helm configuration for production
+helm_charts:
+  - name: "nginx-ingress"
+    repository: "https://kubernetes.github.io/ingress-nginx"
+    version: "4.8.0"
+  - name: "cert-manager"
+    repository: "https://charts.jetstack.io"
+    version: "v1.13.0"
+  - name: "prometheus"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    version: "25.8.0"
+  - name: "grafana"
+    repository: "https://grafana.github.io/helm-charts"
+    version: "7.0.0"
+
+# High Availability Configuration
+ha_enabled: true
+multi_az: true
+cross_zone_load_balancing: true
+
+# Disaster Recovery Configuration
+dr_enabled: true
+dr_region: "us-east-1"
+dr_backup_retention: 90
+
+# Compliance Configuration
+compliance_mode: true
+audit_logging: true
+encryption_at_rest: true
+encryption_in_transit: true
+
+# Performance Configuration
+performance_mode: true
+caching_enabled: true
+cdn_enabled: true
+
+# Cost Optimization
+cost_optimization: true
+spot_instances: true
+reserved_instances: true
