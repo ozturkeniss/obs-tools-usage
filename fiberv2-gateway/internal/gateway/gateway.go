@@ -73,6 +73,11 @@ func (g *Gateway) initializeServices() {
 	if g.config.Services.Payment.Enabled {
 		g.initializeService("payment", g.config.Services.Payment.URLs, g.config.Services.Payment.Timeout)
 	}
+
+	// Initialize Notification Service
+	if g.config.Services.Notification.Enabled {
+		g.initializeService("notification", g.config.Services.Notification.URLs, g.config.Services.Notification.Timeout)
+	}
 }
 
 // initializeService initializes a single service with load balancer and circuit breaker
@@ -135,6 +140,12 @@ func (g *Gateway) setupServiceRoutes(app *fiber.App) {
 	if g.config.Services.Payment.Enabled {
 		paymentGroup := app.Group("/api/payments")
 		g.setupServiceGroup(paymentGroup, "payment")
+	}
+
+	// Notification Service Routes
+	if g.config.Services.Notification.Enabled {
+		notificationGroup := app.Group("/api/notifications")
+		g.setupServiceGroup(notificationGroup, "notification")
 	}
 }
 
