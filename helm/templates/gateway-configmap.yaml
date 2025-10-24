@@ -1,0 +1,39 @@
+{{- if .Values.services.gateway.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "obs-tools-usage.fullname" . }}-gateway-config
+  labels:
+    {{- include "obs-tools-usage.serviceLabels" (dict "serviceName" "gateway" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: 8080
+    redis:
+      host: {{ include "obs-tools-usage.fullname" . }}-redis-master
+      port: 6379
+      db: 1
+    services:
+      product_service_urls: {{ include "obs-tools-usage.productServiceUrl" . }}
+      basket_service_urls: {{ include "obs-tools-usage.basketServiceUrl" . }}
+      payment_service_urls: {{ include "obs-tools-usage.paymentServiceUrl" . }}
+    features:
+      product_service_enabled: {{ .Values.services.gateway.env.PRODUCT_SERVICE_ENABLED | default "true" }}
+      basket_service_enabled: {{ .Values.services.gateway.env.BASKET_SERVICE_ENABLED | default "true" }}
+      payment_service_enabled: {{ .Values.services.gateway.env.PAYMENT_SERVICE_ENABLED | default "true" }}
+      circuit_breaker_enabled: {{ .Values.services.gateway.env.CIRCUIT_BREAKER_ENABLED | default "true" }}
+      load_balancer_enabled: {{ .Values.services.gateway.env.LOAD_BALANCER_ENABLED | default "true" }}
+      load_balancer_strategy: {{ .Values.services.gateway.env.LOAD_BALANCER_STRATEGY | default "round_robin" }}
+      rate_limit_enabled: {{ .Values.services.gateway.env.RATE_LIMIT_ENABLED | default "true" }}
+      health_check_enabled: {{ .Values.services.gateway.env.HEALTH_CHECK_ENABLED | default "true" }}
+      metrics_enabled: {{ .Values.services.gateway.env.METRICS_ENABLED | default "true" }}
+    rate_limit:
+      requests: {{ .Values.services.gateway.env.RATE_LIMIT_REQUESTS | default "1000" }}
+      window: {{ .Values.services.gateway.env.RATE_LIMIT_WINDOW | default "1m" }}
+      burst: {{ .Values.services.gateway.env.RATE_LIMIT_BURST | default "100" }}
+    logging:
+      level: {{ .Values.services.gateway.env.LOG_LEVEL | default "info" }}
+      format: {{ .Values.services.gateway.env.LOG_FORMAT | default "json" }}
+      output: {{ .Values.services.gateway.env.LOG_OUTPUT | default "console" }}
+    environment: {{ .Values.services.gateway.env.ENVIRONMENT | default "production" }}
+{{- end }}
