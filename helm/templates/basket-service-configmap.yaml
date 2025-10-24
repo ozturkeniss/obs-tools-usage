@@ -1,0 +1,24 @@
+{{- if .Values.services.basket.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "obs-tools-usage.fullname" . }}-basket-service-config
+  labels:
+    {{- include "obs-tools-usage.serviceLabels" (dict "serviceName" "basket-service" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: 8081
+      grpc_port: 50051
+    redis:
+      host: {{ include "obs-tools-usage.fullname" . }}-redis-master
+      port: 6379
+      db: 0
+    services:
+      product_service_url: {{ include "obs-tools-usage.productServiceUrl" . }}
+    logging:
+      level: {{ .Values.services.basket.env.LOG_LEVEL | default "info" }}
+      format: {{ .Values.services.basket.env.LOG_FORMAT | default "json" }}
+      output: {{ .Values.services.basket.env.LOG_OUTPUT | default "console" }}
+    environment: {{ .Values.services.basket.env.ENVIRONMENT | default "production" }}
+{{- end }}
