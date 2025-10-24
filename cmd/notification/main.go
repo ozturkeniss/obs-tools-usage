@@ -15,6 +15,7 @@ import (
 	"obs-tools-usage/internal/notification/application/handler"
 	"obs-tools-usage/internal/notification/application/usecase"
 	"obs-tools-usage/internal/notification/infrastructure/config"
+	"obs-tools-usage/internal/notification/infrastructure/metrics"
 	"obs-tools-usage/internal/notification/infrastructure/persistence"
 	httpInterface "obs-tools-usage/internal/notification/interfaces/http"
 	"obs-tools-usage/kafka/consumer"
