@@ -1,0 +1,77 @@
+{{- if .Values.services.gateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "obs-tools-usage.fullname" . }}-gateway
+  labels:
+    {{- include "obs-tools-usage.serviceLabels" (dict "serviceName" "gateway" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.gateway.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "obs-tools-usage.serviceSelectorLabels" (dict "serviceName" "gateway" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "obs-tools-usage.serviceSelectorLabels" (dict "serviceName" "gateway" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/gateway-configmap.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.security.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "obs-tools-usage.serviceAccountName" . }}
+      containers:
+        - name: gateway
+          {{- with .Values.security.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.services.gateway.image.repository }}:{{ .Values.services.gateway.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.services.gateway.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            {{- include "obs-tools-usage.redisEnv" . | nindent 12 }}
+            - name: PRODUCT_SERVICE_URLS
+              value: {{ include "obs-tools-usage.productServiceUrl" . }}
+            - name: BASKET_SERVICE_URLS
+              value: {{ include "obs-tools-usage.basketServiceUrl" . }}
+            - name: PAYMENT_SERVICE_URLS
+              value: {{ include "obs-tools-usage.paymentServiceUrl" . }}
+            {{- range $key, $value := .Values.services.gateway.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.services.gateway.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.services.gateway.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.services.gateway.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: var-run
+              mountPath: /var/run
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: var-run
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
