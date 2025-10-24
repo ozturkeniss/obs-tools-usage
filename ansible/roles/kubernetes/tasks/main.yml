@@ -1,0 +1,74 @@
+---
+# Kubernetes role - Install and configure kubectl
+
+- name: "Add Kubernetes repository"
+  yum_repository:
+    name: kubernetes
+    description: Kubernetes
+    baseurl: https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/rpm/
+    gpgkey: https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/rpm/repodata/repomd.xml.key
+    gpgcheck: true
+    enabled: true
+
+- name: "Install kubectl"
+  package:
+    name: kubectl
+    state: present
+
+- name: "Create kubectl config directory"
+  file:
+    path: "/home/{{ default_user }}/.kube"
+    state: directory
+    owner: "{{ default_user }}"
+    group: "{{ default_group }}"
+    mode: '0755'
+
+- name: "Configure kubectl for EKS"
+  template:
+    src: "kubeconfig.j2"
+    dest: "/home/{{ default_user }}/.kube/config"
+    owner: "{{ default_user }}"
+    group: "{{ default_group }}"
+    mode: '0600'
+
+- name: "Set kubectl context"
+  kubernetes.core.k8s:
+    kubeconfig: "/home/{{ default_user }}/.kube/config"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Config
+      current-context: "{{ cluster_name }}"
+      contexts:
+        - context:
+            cluster: "{{ cluster_name }}"
+            user: "{{ cluster_name }}"
+          name: "{{ cluster_name }}"
+      clusters:
+        - cluster:
+            server: "{{ cluster_endpoint }}"
+            certificate-authority-data: "{{ cluster_ca }}"
+          name: "{{ cluster_name }}"
+      users:
+        - name: "{{ cluster_name }}"
+          user:
+            exec:
+              apiVersion: client.authentication.k8s.io/v1beta1
+              command: aws
+              args:
+                - eks
+                - get-token
+                - --cluster-name
+                - "{{ cluster_name }}"
+
+- name: "Verify kubectl access"
+  command: "kubectl get nodes"
+  register: kubectl_verify
+  failed_when: kubectl_verify.rc != 0
+  changed_when: false
+
+- name: "Install kubectl completion"
+  template:
+    src: "kubectl-completion.sh.j2"
+    dest: "/etc/bash_completion.d/kubectl"
+    mode: '0644'
