@@ -1,0 +1,53 @@
+---
+# Helm role - Install and configure Helm
+
+- name: "Download Helm binary"
+  get_url:
+    url: "https://get.helm.sh/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    dest: "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    mode: '0755'
+
+- name: "Extract Helm binary"
+  unarchive:
+    src: "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    dest: "/tmp/"
+    remote_src: true
+
+- name: "Install Helm binary"
+  copy:
+    src: "/tmp/linux-amd64/helm"
+    dest: "/usr/local/bin/helm"
+    mode: '0755'
+    remote_src: true
+
+- name: "Create Helm config directory"
+  file:
+    path: "/home/{{ default_user }}/.config/helm"
+    state: directory
+    owner: "{{ default_user }}"
+    group: "{{ default_group }}"
+    mode: '0755'
+
+- name: "Configure Helm repositories"
+  kubernetes.core.helm_repository:
+    name: "{{ item.name }}"
+    repo_url: "{{ item.url }}"
+    state: present
+  loop: "{{ helm_repositories }}"
+
+- name: "Update Helm repositories"
+  command: "helm repo update"
+  register: helm_update
+  changed_when: helm_update.rc == 0
+
+- name: "Install Helm completion"
+  template:
+    src: "helm-completion.sh.j2"
+    dest: "/etc/bash_completion.d/helm"
+    mode: '0644'
+
+- name: "Verify Helm installation"
+  command: "helm version"
+  register: helm_verify
+  failed_when: helm_verify.rc != 0
+  changed_when: false
