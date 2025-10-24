@@ -583,3 +583,205 @@ func (u *NotificationUseCase) scheduleNotification(notification *entity.Notifica
 	time.Sleep(time.Until(sendAt))
 	u.sendNotification(notification)
 }
+
+// GetNotificationsByType gets notifications by type
+func (u *NotificationUseCase) GetNotificationsByType(
+	userID string,
+	notificationType entity.NotificationType,
+	limit, offset int,
+) (*dto.NotificationListResponse, error) {
+	ctx := context.Background()
+
+	notifications, err := u.notificationRepo.GetByUserIDAndType(ctx, userID, notificationType, limit, offset)
+	if err != nil {
+		return &dto.NotificationListResponse{
+			Success: false,
+			Message: "Failed to get notifications by type",
+		}, err
+	}
+
+	// Get total count
+	total, _ := u.notificationRepo.GetCountByUserID(ctx, userID)
+	unreadCount, _ := u.notificationRepo.GetUnreadCountByUserID(ctx, userID)
+
+	return &dto.NotificationListResponse{
+		Success:       true,
+		Message:       "Notifications retrieved successfully",
+		Notifications: notifications,
+		Total:         total,
+		UnreadCount:   unreadCount,
+	}, nil
+}
+
+// GetNotificationsByChannel gets notifications by channel
+func (u *NotificationUseCase) GetNotificationsByChannel(
+	userID string,
+	channel entity.NotificationChannel,
+	limit, offset int,
+) (*dto.NotificationListResponse, error) {
+	ctx := context.Background()
+
+	// This would need to be implemented in the repository
+	// For now, return all notifications and filter by channel
+	notifications, err := u.notificationRepo.GetByUserID(ctx, userID, limit, offset)
+	if err != nil {
+		return &dto.NotificationListResponse{
+			Success: false,
+			Message: "Failed to get notifications by channel",
+		}, err
+	}
+
+	// Filter by channel
+	var filteredNotifications []*entity.Notification
+	for _, notification := range notifications {
+		if notification.Channel == channel {
+			filteredNotifications = append(filteredNotifications, notification)
+		}
+	}
+
+	// Get total count
+	total, _ := u.notificationRepo.GetCountByUserID(ctx, userID)
+	unreadCount, _ := u.notificationRepo.GetUnreadCountByUserID(ctx, userID)
+
+	return &dto.NotificationListResponse{
+		Success:       true,
+		Message:       "Notifications retrieved successfully",
+		Notifications: filteredNotifications,
+		Total:         total,
+		UnreadCount:   unreadCount,
+	}, nil
+}
+
+// GetNotificationsByPriority gets notifications by priority
+func (u *NotificationUseCase) GetNotificationsByPriority(
+	userID string,
+	priority entity.NotificationPriority,
+	limit, offset int,
+) (*dto.NotificationListResponse, error) {
+	ctx := context.Background()
+
+	// This would need to be implemented in the repository
+	// For now, return all notifications and filter by priority
+	notifications, err := u.notificationRepo.GetByUserID(ctx, userID, limit, offset)
+	if err != nil {
+		return &dto.NotificationListResponse{
+			Success: false,
+			Message: "Failed to get notifications by priority",
+		}, err
+	}
+
+	// Filter by priority
+	var filteredNotifications []*entity.Notification
+	for _, notification := range notifications {
+		if notification.Priority == priority {
+			filteredNotifications = append(filteredNotifications, notification)
+		}
+	}
+
+	// Get total count
+	total, _ := u.notificationRepo.GetCountByUserID(ctx, userID)
+	unreadCount, _ := u.notificationRepo.GetUnreadCountByUserID(ctx, userID)
+
+	return &dto.NotificationListResponse{
+		Success:       true,
+		Message:       "Notifications retrieved successfully",
+		Notifications: filteredNotifications,
+		Total:         total,
+		UnreadCount:   unreadCount,
+	}, nil
+}
+
+// SearchNotifications searches notifications
+func (u *NotificationUseCase) SearchNotifications(
+	userID, query, notificationType, channel, status, priority, startDate, endDate string,
+	limit, offset int,
+) (*dto.NotificationListResponse, error) {
+	ctx := context.Background()
+
+	// This would need to be implemented in the repository with proper search logic
+	// For now, return all notifications for the user
+	notifications, err := u.notificationRepo.GetByUserID(ctx, userID, limit, offset)
+	if err != nil {
+		return &dto.NotificationListResponse{
+			Success: false,
+			Message: "Failed to search notifications",
+		}, err
+	}
+
+	// Get total count
+	total, _ := u.notificationRepo.GetCountByUserID(ctx, userID)
+	unreadCount, _ := u.notificationRepo.GetUnreadCountByUserID(ctx, userID)
+
+	return &dto.NotificationListResponse{
+		Success:       true,
+		Message:       "Notifications retrieved successfully",
+		Notifications: notifications,
+		Total:         total,
+		UnreadCount:   unreadCount,
+	}, nil
+}
+
+// GetNotificationCount gets notification count
+func (u *NotificationUseCase) GetNotificationCount(
+	userID, status, notificationType string,
+) (*dto.NotificationStatsResponse, error) {
+	ctx := context.Background()
+
+	var count int64
+	var err error
+
+	if status != "" {
+		count, err = u.notificationRepo.GetCountByStatus(ctx, entity.NotificationStatus(status))
+	} else if notificationType != "" {
+		count, err = u.notificationRepo.GetCountByType(ctx, entity.NotificationType(notificationType))
+	} else {
+		count, err = u.notificationRepo.GetCountByUserID(ctx, userID)
+	}
+
+	if err != nil {
+		return &dto.NotificationStatsResponse{
+			Success: false,
+			Message: "Failed to get notification count",
+		}, err
+	}
+
+	stats := &entity.NotificationStats{
+		TotalNotifications: count,
+	}
+
+	return &dto.NotificationStatsResponse{
+		Success: true,
+		Message: "Notification count retrieved successfully",
+		Stats:   stats,
+	}, nil
+}
+
+// GetRecentNotifications gets recent notifications
+func (u *NotificationUseCase) GetRecentNotifications(
+	userID string,
+	hours, limit, offset int,
+) (*dto.NotificationListResponse, error) {
+	ctx := context.Background()
+
+	// This would need to be implemented in the repository with time filtering
+	// For now, return all notifications for the user
+	notifications, err := u.notificationRepo.GetByUserID(ctx, userID, limit, offset)
+	if err != nil {
+		return &dto.NotificationListResponse{
+			Success: false,
+			Message: "Failed to get recent notifications",
+		}, err
+	}
+
+	// Get total count
+	total, _ := u.notificationRepo.GetCountByUserID(ctx, userID)
+	unreadCount, _ := u.notificationRepo.GetUnreadCountByUserID(ctx, userID)
+
+	return &dto.NotificationListResponse{
+		Success:       true,
+		Message:       "Recent notifications retrieved successfully",
+		Notifications: notifications,
+		Total:         total,
+		UnreadCount:   unreadCount,
+	}, nil
+}
