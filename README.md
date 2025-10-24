@@ -1528,3 +1528,271 @@ graph TB
     PodSecurity --> NetworkPolicies
     NetworkPolicies --> ImageSecurity
 ```
+
+## CI/CD Pipeline Architecture
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Source Control"
+        GitHub[GitHub Repository<br/>Code Push/Pull Request<br/>Release Triggers]
+    end
+    
+    subgraph "CI/CD Pipeline"
+        subgraph "Continuous Integration"
+            CodeCheckout[Code Checkout<br/>Branch Detection<br/>Environment Selection]
+            TestAndBuild[Test & Build<br/>Go Tests<br/>Linting<br/>Security Scan<br/>Docker Build]
+            QualityGates[Quality Gates<br/>Test Coverage<br/>Security Scan<br/>Code Quality]
+        end
+        
+        subgraph "Continuous Deployment"
+            DevDeploy[Development Deploy<br/>Auto Deploy on develop<br/>Terraform + Ansible<br/>Helm Charts]
+            StagingDeploy[Staging Deploy<br/>Auto Deploy on main<br/>Production-like Environment<br/>Integration Tests]
+            ProdDeploy[Production Deploy<br/>Manual Release Trigger<br/>Blue-Green Deployment<br/>Rollback Capability]
+        end
+        
+        subgraph "Post-Deployment"
+            HealthChecks[Health Checks<br/>Service Availability<br/>Performance Monitoring<br/>Alert Notifications]
+            PerformanceTests[Performance Tests<br/>Load Testing<br/>Stress Testing<br/>Database Performance]
+            Monitoring[Monitoring<br/>Metrics Collection<br/>Log Aggregation<br/>Alert Management]
+        end
+    end
+    
+    subgraph "Environments"
+        DevEnv[Development<br/>Fast Iteration<br/>Debug Mode<br/>Minimal Resources]
+        StagingEnv[Staging<br/>Production-like<br/>Integration Tests<br/>Performance Tests]
+        ProdEnv[Production<br/>High Availability<br/>Security Hardening<br/>Monitoring]
+    end
+    
+    subgraph "Infrastructure"
+        AWSInfra[AWS Infrastructure<br/>EKS Clusters<br/>RDS Databases<br/>ElastiCache<br/>MSK Kafka]
+        K8sCluster[Kubernetes Clusters<br/>Application Pods<br/>Services<br/>Ingress<br/>ConfigMaps]
+    end
+    
+    GitHub --> CodeCheckout
+    CodeCheckout --> TestAndBuild
+    TestAndBuild --> QualityGates
+    
+    QualityGates --> DevDeploy
+    QualityGates --> StagingDeploy
+    QualityGates --> ProdDeploy
+    
+    DevDeploy --> DevEnv
+    StagingDeploy --> StagingEnv
+    ProdDeploy --> ProdEnv
+    
+    DevEnv --> HealthChecks
+    StagingEnv --> HealthChecks
+    ProdEnv --> HealthChecks
+    
+    HealthChecks --> PerformanceTests
+    PerformanceTests --> Monitoring
+    
+    DevEnv --> AWSInfra
+    StagingEnv --> AWSInfra
+    ProdEnv --> AWSInfra
+    
+    AWSInfra --> K8sCluster
+```
+
+## CI/CD Pipeline Stages
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph LR
+    subgraph "Stage 1: Code Quality"
+        CodePush[Code Push/PR<br/>GitHub Trigger]
+        LintCheck[Linting<br/>golangci-lint<br/>ansible-lint<br/>terraform fmt]
+        SecurityScan[Security Scan<br/>Trivy<br/>Gosec<br/>Checkov]
+        TestRun[Test Execution<br/>Unit Tests<br/>Integration Tests<br/>Coverage Report]
+    end
+    
+    subgraph "Stage 2: Build & Package"
+        DockerBuild[Docker Build<br/>Multi-stage Build<br/>Image Optimization<br/>Security Scanning]
+        ImagePush[Image Push<br/>GitHub Container Registry<br/>Tag Management<br/>Vulnerability Scan]
+        HelmPackage[Helm Package<br/>Chart Validation<br/>Template Testing<br/>Dependency Check]
+    end
+    
+    subgraph "Stage 3: Infrastructure"
+        TerraformPlan[Terraform Plan<br/>Resource Planning<br/>Change Detection<br/>Cost Estimation]
+        TerraformApply[Terraform Apply<br/>Infrastructure Creation<br/>State Management<br/>Rollback Capability]
+        AnsibleConfig[Ansible Configuration<br/>System Setup<br/>Service Configuration<br/>Security Hardening]
+    end
+    
+    subgraph "Stage 4: Deployment"
+        K8sDeploy[Kubernetes Deployment<br/>Namespace Creation<br/>Resource Deployment<br/>Service Configuration]
+        HealthCheck[Health Checks<br/>Pod Readiness<br/>Service Availability<br/>Endpoint Testing]
+        SmokeTest[Smoke Tests<br/>API Endpoint Tests<br/>Database Connectivity<br/>Service Integration]
+    end
+    
+    subgraph "Stage 5: Validation"
+        LoadTest[Load Testing<br/>k6 Performance Tests<br/>Response Time Validation<br/>Throughput Testing]
+        SecurityTest[Security Testing<br/>Vulnerability Scan<br/>Penetration Testing<br/>Compliance Check]
+        MonitoringSetup[Monitoring Setup<br/>Prometheus Configuration<br/>Grafana Dashboards<br/>Alert Rules]
+    end
+    
+    CodePush --> LintCheck
+    LintCheck --> SecurityScan
+    SecurityScan --> TestRun
+    TestRun --> DockerBuild
+    
+    DockerBuild --> ImagePush
+    ImagePush --> HelmPackage
+    HelmPackage --> TerraformPlan
+    
+    TerraformPlan --> TerraformApply
+    TerraformApply --> AnsibleConfig
+    AnsibleConfig --> K8sDeploy
+    
+    K8sDeploy --> HealthCheck
+    HealthCheck --> SmokeTest
+    SmokeTest --> LoadTest
+    
+    LoadTest --> SecurityTest
+    SecurityTest --> MonitoringSetup
+```
+
+## GitHub Actions Workflows
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Main CI/CD Workflow"
+        CICDTrigger[Trigger Events<br/>Push to main/develop<br/>Pull Request<br/>Release]
+        TestBuildJob[Test & Build Job<br/>Go Tests<br/>Docker Build<br/>Security Scan]
+        InfraTestJob[Infrastructure Test<br/>Terraform Validate<br/>Ansible Lint<br/>Helm Lint]
+        DeployDevJob[Deploy to Dev<br/>Auto Deploy<br/>Terraform Apply<br/>Ansible Playbook]
+        DeployStagingJob[Deploy to Staging<br/>Auto Deploy<br/>Production-like<br/>Integration Tests]
+        DeployProdJob[Deploy to Production<br/>Manual Trigger<br/>Release-based<br/>Blue-Green Deploy]
+    end
+    
+    subgraph "Security Workflow"
+        SecurityTrigger[Security Trigger<br/>Daily Schedule<br/>Push Events<br/>PR Events]
+        DepScanJob[Dependency Scan<br/>Go Security Audit<br/>Vulnerability Check<br/>License Check]
+        ContainerScanJob[Container Scan<br/>Trivy Scanner<br/>Image Vulnerability<br/>Base Image Check]
+        InfraScanJob[Infrastructure Scan<br/>Checkov Scanner<br/>Terraform Security<br/>AWS Best Practices]
+        SecretsScanJob[Secrets Scan<br/>TruffleHog<br/>Credential Detection<br/>API Key Check]
+    end
+    
+    subgraph "Performance Workflow"
+        PerfTrigger[Performance Trigger<br/>Weekly Schedule<br/>Manual Trigger<br/>Post-Deployment]
+        LoadTestJob[Load Testing<br/>k6 Load Tests<br/>Response Time<br/>Throughput Testing]
+        StressTestJob[Stress Testing<br/>k6 Stress Tests<br/>Breaking Point<br/>Resource Limits]
+        DBPerfJob[Database Performance<br/>Query Performance<br/>Connection Pool<br/>Index Optimization]
+        ProfilingJob[Profiling<br/>CPU Profiling<br/>Memory Profiling<br/>Performance Analysis]
+    end
+    
+    subgraph "Notification Workflow"
+        NotifyTrigger[Notification Trigger<br/>Deployment Status<br/>Test Results<br/>Security Alerts]
+        SlackNotify[Slack Notification<br/>Deployment Status<br/>Test Results<br/>Error Alerts]
+        EmailNotify[Email Notification<br/>Security Alerts<br/>Critical Issues<br/>Weekly Reports]
+        WebhookNotify[Webhook Notification<br/>External Systems<br/>Monitoring Tools<br/>Alert Management]
+    end
+    
+    CICDTrigger --> TestBuildJob
+    TestBuildJob --> InfraTestJob
+    InfraTestJob --> DeployDevJob
+    DeployDevJob --> DeployStagingJob
+    DeployStagingJob --> DeployProdJob
+    
+    SecurityTrigger --> DepScanJob
+    DepScanJob --> ContainerScanJob
+    ContainerScanJob --> InfraScanJob
+    InfraScanJob --> SecretsScanJob
+    
+    PerfTrigger --> LoadTestJob
+    LoadTestJob --> StressTestJob
+    StressTestJob --> DBPerfJob
+    DBPerfJob --> ProfilingJob
+    
+    DeployProdJob --> NotifyTrigger
+    SecretsScanJob --> NotifyTrigger
+    ProfilingJob --> NotifyTrigger
+    
+    NotifyTrigger --> SlackNotify
+    NotifyTrigger --> EmailNotify
+    NotifyTrigger --> WebhookNotify
+```
+
+## Deployment Strategies
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Development Deployment"
+        DevStrategy[Fast Deployment<br/>Immediate Updates<br/>Debug Mode<br/>Hot Reload]
+        DevRollback[Quick Rollback<br/>Git Revert<br/>Docker Image Rollback<br/>Configuration Reset]
+    end
+    
+    subgraph "Staging Deployment"
+        StagingStrategy[Production-like<br/>Integration Testing<br/>Performance Testing<br/>Security Testing]
+        StagingValidation[Validation Tests<br/>API Testing<br/>Database Testing<br/>End-to-End Tests]
+    end
+    
+    subgraph "Production Deployment"
+        BlueGreen[Blue-Green Deployment<br/>Zero Downtime<br/>Instant Rollback<br/>Traffic Switching]
+        Canary[Canary Deployment<br/>Gradual Rollout<br/>A/B Testing<br/>Risk Mitigation]
+        Rolling[Rolling Deployment<br/>Gradual Update<br/>Service Continuity<br/>Resource Management]
+    end
+    
+    subgraph "Rollback Strategies"
+        AutoRollback[Automatic Rollback<br/>Health Check Failure<br/>Performance Degradation<br/>Error Rate Threshold]
+        ManualRollback[Manual Rollback<br/>Admin Decision<br/>Emergency Response<br/>Quick Recovery]
+        DatabaseRollback[Database Rollback<br/>Migration Rollback<br/>Data Consistency<br/>Backup Restoration]
+    end
+    
+    DevStrategy --> DevRollback
+    StagingStrategy --> StagingValidation
+    StagingValidation --> BlueGreen
+    
+    BlueGreen --> Canary
+    Canary --> Rolling
+    Rolling --> AutoRollback
+    
+    AutoRollback --> ManualRollback
+    ManualRollback --> DatabaseRollback
+```
+
+## Monitoring and Alerting
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Application Monitoring"
+        AppMetrics[Application Metrics<br/>Request Rate<br/>Response Time<br/>Error Rate<br/>Throughput]
+        BusinessMetrics[Business Metrics<br/>User Activity<br/>Transaction Volume<br/>Revenue Metrics<br/>Conversion Rate]
+    end
+    
+    subgraph "Infrastructure Monitoring"
+        SystemMetrics[System Metrics<br/>CPU Usage<br/>Memory Usage<br/>Disk I/O<br/>Network I/O]
+        K8sMetrics[Kubernetes Metrics<br/>Pod Status<br/>Node Health<br/>Resource Usage<br/>Cluster Health]
+    end
+    
+    subgraph "Database Monitoring"
+        DBMetrics[Database Metrics<br/>Query Performance<br/>Connection Pool<br/>Lock Contention<br/>Replication Lag]
+        CacheMetrics[Cache Metrics<br/>Hit Rate<br/>Miss Rate<br/>Memory Usage<br/>Eviction Rate]
+    end
+    
+    subgraph "Security Monitoring"
+        SecurityMetrics[Security Metrics<br/>Failed Logins<br/>Suspicious Activity<br/>Vulnerability Scan<br/>Compliance Status]
+        AuditLogs[Audit Logs<br/>User Actions<br/>System Changes<br/>Access Logs<br/>Security Events]
+    end
+    
+    subgraph "Alerting System"
+        AlertRules[Alert Rules<br/>Threshold-based<br/>Anomaly Detection<br/>Trend Analysis<br/>Predictive Alerts]
+        NotificationChannels[Notification Channels<br/>Slack<br/>Email<br/>PagerDuty<br/>Webhooks]
+        EscalationPolicy[Escalation Policy<br/>Severity Levels<br/>Response Time<br/>Escalation Path<br/>On-call Rotation]
+    end
+    
+    AppMetrics --> AlertRules
+    BusinessMetrics --> AlertRules
+    SystemMetrics --> AlertRules
+    K8sMetrics --> AlertRules
+    DBMetrics --> AlertRules
+    CacheMetrics --> AlertRules
+    SecurityMetrics --> AlertRules
+    AuditLogs --> AlertRules
+    
+    AlertRules --> NotificationChannels
+    NotificationChannels --> EscalationPolicy
+```
