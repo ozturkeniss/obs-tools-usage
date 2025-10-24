@@ -40,9 +40,10 @@ type Config struct {
 
 // ServicesConfig holds configuration for backend services
 type ServicesConfig struct {
-	Product ProductServiceConfig
-	Basket  BasketServiceConfig
-	Payment PaymentServiceConfig
+	Product      ProductServiceConfig
+	Basket       BasketServiceConfig
+	Payment      PaymentServiceConfig
+	Notification NotificationServiceConfig
 }
 
 // ProductServiceConfig holds product service configuration
@@ -65,6 +66,15 @@ type BasketServiceConfig struct {
 
 // PaymentServiceConfig holds payment service configuration
 type PaymentServiceConfig struct {
+	Name     string
+	URLs     []string
+	Timeout  int
+	Retries  int
+	Enabled  bool
+}
+
+// NotificationServiceConfig holds notification service configuration
+type NotificationServiceConfig struct {
 	Name     string
 	URLs     []string
 	Timeout  int
@@ -165,6 +175,13 @@ func LoadConfig() *Config {
 				Timeout:  getEnvAsInt("PAYMENT_SERVICE_TIMEOUT", 30),
 				Retries:  getEnvAsInt("PAYMENT_SERVICE_RETRIES", 3),
 				Enabled:  getEnvAsBool("PAYMENT_SERVICE_ENABLED", true),
+			},
+			Notification: NotificationServiceConfig{
+				Name:     getEnv("NOTIFICATION_SERVICE_NAME", "notification-service"),
+				URLs:     getEnvSlice("NOTIFICATION_SERVICE_URLS", []string{"http://localhost:8084"}),
+				Timeout:  getEnvAsInt("NOTIFICATION_SERVICE_TIMEOUT", 30),
+				Retries:  getEnvAsInt("NOTIFICATION_SERVICE_RETRIES", 3),
+				Enabled:  getEnvAsBool("NOTIFICATION_SERVICE_ENABLED", true),
 			},
 		},
 		
