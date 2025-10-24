@@ -1,0 +1,26 @@
+{{- if .Values.services.payment.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "obs-tools-usage.fullname" . }}-payment-service-config
+  labels:
+    {{- include "obs-tools-usage.serviceLabels" (dict "serviceName" "payment-service" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: 8082
+      grpc_port: 50052
+    database:
+      host: {{ include "obs-tools-usage.fullname" . }}-mariadb
+      port: 3306
+      name: payment_service
+      ssl_mode: false
+    services:
+      basket_service_url: {{ include "obs-tools-usage.basketServiceUrl" . }}
+      product_service_url: {{ include "obs-tools-usage.productServiceUrl" . }}
+    logging:
+      level: {{ .Values.services.payment.env.LOG_LEVEL | default "info" }}
+      format: {{ .Values.services.payment.env.LOG_FORMAT | default "json" }}
+      output: {{ .Values.services.payment.env.LOG_OUTPUT | default "console" }}
+    environment: {{ .Values.services.payment.env.ENVIRONMENT | default "production" }}
+{{- end }}
