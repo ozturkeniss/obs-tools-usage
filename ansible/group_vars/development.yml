@@ -1,0 +1,93 @@
+---
+# Development Environment Variables
+# These variables are specific to the development environment
+
+environment: "dev"
+log_level: "debug"
+monitoring_enabled: false
+backup_enabled: false
+security_hardening: false
+
+# Development-specific configurations
+debug_mode: true
+verbose_logging: true
+development_tools: true
+
+# Resource limits for development
+resource_limits:
+  cpu: "500m"
+  memory: "512Mi"
+  storage: "5Gi"
+
+resource_requests:
+  cpu: "100m"
+  memory: "128Mi"
+  storage: "1Gi"
+
+# Scaling for development
+hpa_min_replicas: 1
+hpa_max_replicas: 5
+
+# Application replicas for development
+app_replicas:
+  gateway: 1
+  product: 1
+  basket: 1
+  payment: 1
+
+# Database configuration for development
+postgresql_instance_class: "db.t3.micro"
+mariadb_instance_class: "db.t3.micro"
+elasticache_node_type: "cache.t3.micro"
+msk_instance_type: "kafka.t3.small"
+
+# Monitoring configuration for development
+prometheus_retention: "7d"
+grafana_admin_password: "admin123"
+alerting_enabled: false
+
+# Backup configuration for development
+backup_retention_days: 3
+backup_schedule: "0 2 * * *"
+
+# Security configuration for development
+firewall_rules:
+  - port: 22
+    source: "0.0.0.0/0"
+    protocol: "tcp"
+  - port: 80
+    source: "0.0.0.0/0"
+    protocol: "tcp"
+  - port: 443
+    source: "0.0.0.0/0"
+    protocol: "tcp"
+
+# SSL configuration for development
+ssl_enabled: false
+certificate_validation: false
+
+# Logging configuration for development
+log_retention_days: 7
+log_level: "debug"
+structured_logging: true
+
+# Network configuration for development
+dns_servers:
+  - "169.254.169.253"
+  - "8.8.8.8"
+
+# Kubernetes configuration for development
+k8s_addons:
+  - "coredns"
+  - "kube-proxy"
+  - "vpc-cni"
+  - "aws-ebs-csi-driver"
+
+# Helm configuration for development
+helm_charts:
+  - name: "nginx-ingress"
+    repository: "https://kubernetes.github.io/ingress-nginx"
+    version: "4.8.0"
+  - name: "cert-manager"
+    repository: "https://charts.jetstack.io"
+    version: "v1.13.0"
