@@ -130,6 +130,17 @@ case $ACTION in
             exit 1
         fi
         
+        # Build notification service image
+        print_status "Building notification service image..."
+        docker build -f dockerfiles/notification.dockerfile -t notification-service:$TAG .
+        
+        if [ $? -eq 0 ]; then
+            print_success "Notification service image built successfully!"
+        else
+            print_error "Failed to build notification service image!"
+            exit 1
+        fi
+        
         # Build gateway service image
         print_status "Building gateway service image..."
         docker build -f dockerfiles/gateway.dockerfile -t gateway:$TAG .
