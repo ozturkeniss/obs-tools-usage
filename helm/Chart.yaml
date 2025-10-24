@@ -1,0 +1,32 @@
+apiVersion: v2
+name: obs-tools-usage
+description: A Helm chart for OBS Tools Usage Microservices
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - microservices
+  - e-commerce
+  - go
+  - fiber
+  - grpc
+maintainers:
+  - name: OBS Tools Team
+    email: team@obstools.com
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "17.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+  - name: mariadb
+    version: "11.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: mariadb.enabled
+  - name: kafka
+    version: "22.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: kafka.enabled
