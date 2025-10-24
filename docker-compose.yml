@@ -133,6 +133,33 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  notification-service:
+    build:
+      context: .
+      dockerfile: dockerfiles/notification.dockerfile
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    environment:
+      - ENVIRONMENT=development
+      - PORT=8084
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=notification_service
+      - DB_SSL_MODE=disable
+      - KAFKA_BROKERS=kafka:9092
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=text
+      - LOG_OUTPUT=console
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
   gateway:
     build:
       context: ./fiberv2-gateway
