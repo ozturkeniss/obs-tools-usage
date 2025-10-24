@@ -1,0 +1,99 @@
+---
+# OBS Tools Usage - Ansible Inventory
+# This inventory defines the target infrastructure for configuration management
+
+all:
+  children:
+    # EKS Cluster Nodes
+    eks_nodes:
+      hosts:
+        eks-node-1:
+          ansible_host: "{{ eks_node_1_ip }}"
+          ansible_user: ec2-user
+          ansible_ssh_private_key_file: "{{ ssh_private_key_path }}"
+          node_type: "general"
+          availability_zone: "us-west-2a"
+        eks-node-2:
+          ansible_host: "{{ eks_node_2_ip }}"
+          ansible_user: ec2-user
+          ansible_ssh_private_key_file: "{{ ssh_private_key_path }}"
+          node_type: "general"
+          availability_zone: "us-west-2b"
+        eks-node-3:
+          ansible_host: "{{ eks_node_3_ip }}"
+          ansible_user: ec2-user
+          ansible_ssh_private_key_file: "{{ ssh_private_key_path }}"
+          node_type: "spot"
+          availability_zone: "us-west-2c"
+      vars:
+        ansible_python_interpreter: /usr/bin/python3
+        cluster_name: "{{ terraform_outputs.cluster_name }}"
+        cluster_endpoint: "{{ terraform_outputs.cluster_endpoint }}"
+        cluster_ca: "{{ terraform_outputs.cluster_certificate_authority_data }}"
+    
+    # Jump Host (Bastion)
+    jump_host:
+      hosts:
+        bastion:
+          ansible_host: "{{ bastion_ip }}"
+          ansible_user: ec2-user
+          ansible_ssh_private_key_file: "{{ ssh_private_key_path }}"
+      vars:
+        ansible_python_interpreter: /usr/bin/python3
+        ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q ec2-user@{{ bastion_ip }}"'
+    
+    # Environment Groups
+    development:
+      children:
+        eks_nodes:
+      vars:
+        environment: "dev"
+        log_level: "debug"
+        monitoring_enabled: false
+        backup_enabled: false
+    
+    staging:
+      children:
+        eks_nodes:
+      vars:
+        environment: "staging"
+        log_level: "info"
+        monitoring_enabled: true
+        backup_enabled: true
+    
+    production:
+      children:
+        eks_nodes:
+      vars:
+        environment: "prod"
+        log_level: "warn"
+        monitoring_enabled: true
+        backup_enabled: true
+        security_hardening: true
+    
+    # Service Groups
+    kubernetes_masters:
+      hosts: {}
+      vars:
+        role: "master"
+    
+    kubernetes_workers:
+      children:
+        eks_nodes:
+      vars:
+        role: "worker"
+    
+    # Monitoring Group
+    monitoring:
+      hosts:
+        prometheus:
+          ansible_host: "{{ prometheus_ip }}"
+          ansible_user: ec2-user
+          ansible_ssh_private_key_file: "{{ ssh_private_key_path }}"
+        grafana:
+          ansible_host: "{{ grafana_ip }}"
+          ansible_user: ec2-user
+          ansible_ssh_private_key_file: "{{ ssh_private_key_path }}"
+      vars:
+        ansible_python_interpreter: /usr/bin/python3
+        monitoring_stack: "prometheus-grafana"
