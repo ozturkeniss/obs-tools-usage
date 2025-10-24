@@ -1,0 +1,57 @@
+---
+# OBS Tools Usage - Kubernetes Setup Playbook
+# This playbook configures Kubernetes cluster access and tools
+
+- name: "Kubernetes Setup - EKS Nodes"
+  hosts: eks_nodes
+  become: true
+  gather_facts: true
+  
+  pre_tasks:
+    - name: "Verify cluster connectivity"
+      uri:
+        url: "{{ cluster_endpoint }}/version"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ cluster_token }}"
+        status_code: 200
+      register: cluster_check
+      failed_when: cluster_check.status != 200
+
+  roles:
+    - role: kubernetes
+      tags: [kubernetes, kubectl]
+    
+    - role: helm
+      tags: [helm, charts]
+    
+    - role: aws-load-balancer-controller
+      tags: [aws, load-balancer]
+      when: "'aws-load-balancer-controller' in k8s_addons"
+    
+    - role: external-dns
+      tags: [dns, external-dns]
+      when: "'external-dns' in k8s_addons"
+    
+    - role: cert-manager
+      tags: [ssl, certificates]
+      when: "'cert-manager' in k8s_addons"
+    
+    - role: nginx-ingress
+      tags: [ingress, nginx]
+      when: "'nginx-ingress' in k8s_addons"
+
+  post_tasks:
+    - name: "Verify kubectl access"
+      command: "kubectl get nodes"
+      register: kubectl_check
+      failed_when: kubectl_check.rc != 0
+    
+    - name: "Verify helm access"
+      command: "helm list --all-namespaces"
+      register: helm_check
+      failed_when: helm_check.rc != 0
+    
+    - name: "Display cluster information"
+      debug:
+        msg: "Kubernetes cluster setup completed successfully"
