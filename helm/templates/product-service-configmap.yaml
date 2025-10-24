@@ -1,0 +1,23 @@
+{{- if .Values.services.product.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "obs-tools-usage.fullname" . }}-product-service-config
+  labels:
+    {{- include "obs-tools-usage.serviceLabels" (dict "serviceName" "product-service" "Values" .Values "Chart" .Chart "Release" .Release) | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: 8080
+      grpc_port: 50050
+    database:
+      host: {{ include "obs-tools-usage.fullname" . }}-postgresql
+      port: 5432
+      name: product_service
+      ssl_mode: disable
+    logging:
+      level: {{ .Values.services.product.env.LOG_LEVEL | default "info" }}
+      format: {{ .Values.services.product.env.LOG_FORMAT | default "json" }}
+      output: {{ .Values.services.product.env.LOG_OUTPUT | default "console" }}
+    environment: {{ .Values.services.product.env.ENVIRONMENT | default "production" }}
+{{- end }}
