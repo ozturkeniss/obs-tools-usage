@@ -980,3 +980,211 @@ graph TB
     PaymentService --> BasketService
     PaymentService --> ProductService
 ```
+
+## Kubernetes Deployment Architecture
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Kubernetes Cluster"
+        subgraph "Ingress Layer"
+            Ingress[Ingress Controller<br/>nginx-ingress<br/>SSL Termination<br/>Load Balancing]
+        end
+        
+        subgraph "Application Layer"
+            Gateway[Gateway Deployment<br/>3 Replicas<br/>LoadBalancer Service]
+            ProductService[Product Service<br/>2 Replicas<br/>ClusterIP Service]
+            BasketService[Basket Service<br/>2 Replicas<br/>ClusterIP Service]
+            PaymentService[Payment Service<br/>2 Replicas<br/>ClusterIP Service]
+        end
+        
+        subgraph "Data Layer"
+            PostgreSQL[PostgreSQL<br/>Bitnami Chart<br/>8Gi Persistent Volume]
+            Redis[Redis<br/>Bitnami Chart<br/>4Gi Persistent Volume]
+            MariaDB[MariaDB<br/>Bitnami Chart<br/>8Gi Persistent Volume]
+        end
+        
+        subgraph "Message Layer"
+            Kafka[Kafka<br/>Bitnami Chart<br/>3 Replicas<br/>10Gi Persistent Volume]
+            Zookeeper[Zookeeper<br/>Bitnami Chart<br/>3 Replicas]
+        end
+        
+        subgraph "Monitoring Layer"
+            ServiceMonitor[ServiceMonitor<br/>Prometheus Integration]
+            HPA[Horizontal Pod Autoscaler<br/>CPU/Memory Based Scaling]
+        end
+        
+        subgraph "Security Layer"
+            NetworkPolicy[NetworkPolicy<br/>Traffic Isolation]
+            ServiceAccount[ServiceAccount<br/>RBAC Integration]
+            PodSecurityContext[Pod Security Context<br/>Non-root User<br/>Read-only Filesystem]
+        end
+    end
+    
+    subgraph "External Access"
+        Client[External Client]
+        LoadBalancer[Load Balancer<br/>AWS NLB / GCP LB]
+    end
+    
+    Client --> LoadBalancer
+    LoadBalancer --> Ingress
+    Ingress --> Gateway
+    
+    Gateway --> ProductService
+    Gateway --> BasketService
+    Gateway --> PaymentService
+    
+    ProductService --> PostgreSQL
+    BasketService --> Redis
+    PaymentService --> MariaDB
+    
+    PaymentService --> Kafka
+    Kafka --> Zookeeper
+    
+    BasketService --> ProductService
+    PaymentService --> BasketService
+    PaymentService --> ProductService
+    
+    Gateway --> ServiceMonitor
+    Gateway --> HPA
+    
+    Gateway --> NetworkPolicy
+    ProductService --> NetworkPolicy
+    BasketService --> NetworkPolicy
+    PaymentService --> NetworkPolicy
+    
+    Gateway --> ServiceAccount
+    ProductService --> ServiceAccount
+    BasketService --> ServiceAccount
+    PaymentService --> ServiceAccount
+```
+
+## Helm Chart Structure
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Helm Chart"
+        ChartYaml[Chart.yaml<br/>Metadata & Dependencies]
+        ValuesYaml[values.yaml<br/>Configuration Values]
+        
+        subgraph "Templates"
+            Deployments[Deployments<br/>product-service<br/>basket-service<br/>payment-service<br/>gateway]
+            Services[Services<br/>ClusterIP Services<br/>LoadBalancer Service]
+            ConfigMaps[ConfigMaps<br/>Service Configurations]
+            Ingress[Ingress<br/>External Access]
+            ServiceAccount[ServiceAccount<br/>RBAC]
+            NetworkPolicy[NetworkPolicy<br/>Security]
+            ServiceMonitor[ServiceMonitor<br/>Monitoring]
+            HPA[HPA<br/>Autoscaling]
+        end
+        
+        subgraph "Dependencies"
+            PostgreSQLChart[PostgreSQL Chart<br/>Bitnami]
+            RedisChart[Redis Chart<br/>Bitnami]
+            MariaDBChart[MariaDB Chart<br/>Bitnami]
+            KafkaChart[Kafka Chart<br/>Bitnami]
+        end
+    end
+    
+    ChartYaml --> Deployments
+    ValuesYaml --> Deployments
+    
+    Deployments --> Services
+    Services --> ConfigMaps
+    ConfigMaps --> Ingress
+    Ingress --> ServiceAccount
+    ServiceAccount --> NetworkPolicy
+    NetworkPolicy --> ServiceMonitor
+    ServiceMonitor --> HPA
+    
+    ChartYaml --> PostgreSQLChart
+    ChartYaml --> RedisChart
+    ChartYaml --> MariaDBChart
+    ChartYaml --> KafkaChart
+```
+
+## Deployment Commands
+
+```bash
+# Install the Helm chart
+helm install obs-tools-usage ./helm
+
+# Upgrade the deployment
+helm upgrade obs-tools-usage ./helm
+
+# Check deployment status
+helm status obs-tools-usage
+
+# View all resources
+kubectl get all -l app.kubernetes.io/name=obs-tools-usage
+
+# Access the gateway
+kubectl port-forward svc/obs-tools-usage-gateway 8080:8080
+
+# View logs
+kubectl logs -l app.kubernetes.io/component=gateway -f
+
+# Scale services
+kubectl scale deployment obs-tools-usage-gateway --replicas=5
+```
+
+## Environment Configuration
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Production Environment"
+        ProdValues[values.yaml<br/>Production Settings]
+        ProdSecurity[Security Context<br/>Non-root User<br/>Read-only Filesystem]
+        ProdResources[Resource Limits<br/>CPU: 1000m<br/>Memory: 1Gi]
+        ProdPersistence[Persistent Volumes<br/>8Gi PostgreSQL<br/>4Gi Redis<br/>8Gi MariaDB<br/>10Gi Kafka]
+    end
+    
+    subgraph "Development Environment"
+        DevValues[values-dev.yaml<br/>Development Settings]
+        DevSecurity[Relaxed Security<br/>Debug Mode]
+        DevResources[Lower Resources<br/>CPU: 250m<br/>Memory: 256Mi]
+        DevPersistence[Smaller Volumes<br/>1Gi each]
+    end
+    
+    subgraph "Staging Environment"
+        StagingValues[values-staging.yaml<br/>Staging Settings]
+        StagingSecurity[Production-like Security]
+        StagingResources[Medium Resources<br/>CPU: 500m<br/>Memory: 512Mi]
+        StagingPersistence[Medium Volumes<br/>4Gi each]
+    end
+```
+
+## Monitoring and Observability
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#663399', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#663399', 'lineColor': '#ffffff', 'secondaryColor': '#663399', 'tertiaryColor': '#663399'}}}%%
+graph TB
+    subgraph "Application Metrics"
+        PrometheusMetrics[Prometheus Metrics<br/>Request Count<br/>Response Time<br/>Error Rate<br/>CPU Usage<br/>Memory Usage]
+    end
+    
+    subgraph "Health Checks"
+        LivenessProbe[Liveness Probe<br/>/health endpoint<br/>30s interval]
+        ReadinessProbe[Readiness Probe<br/>/health/ready endpoint<br/>5s interval]
+    end
+    
+    subgraph "Logging"
+        StructuredLogs[Structured Logging<br/>JSON Format<br/>Request Tracking<br/>Error Logging]
+    end
+    
+    subgraph "Service Discovery"
+        ServiceMonitor[ServiceMonitor<br/>Prometheus Integration<br/>30s scrape interval]
+    end
+    
+    subgraph "Autoscaling"
+        HPA[HPA<br/>CPU-based Scaling<br/>Memory-based Scaling<br/>Min: 1, Max: 100]
+    end
+    
+    PrometheusMetrics --> LivenessProbe
+    LivenessProbe --> ReadinessProbe
+    ReadinessProbe --> StructuredLogs
+    StructuredLogs --> ServiceMonitor
+    ServiceMonitor --> HPA
+```
