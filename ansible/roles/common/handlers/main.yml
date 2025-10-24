@@ -1,0 +1,16 @@
+---
+# Common role - Handlers
+
+- name: "restart rsyslog"
+  service:
+    name: rsyslog
+    state: restarted
+
+- name: "restart systemd-journald"
+  service:
+    name: systemd-journald
+    state: restarted
+
+- name: "reload systemd"
+  systemd:
+    daemon_reload: true
