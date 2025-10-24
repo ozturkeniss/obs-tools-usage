@@ -1,0 +1,178 @@
+---
+# Global variables for all hosts
+# These variables apply to all hosts in the inventory
+
+# Project Configuration
+project_name: "obs-tools-usage"
+project_version: "1.0.0"
+project_description: "OBS Tools Usage Microservices Platform"
+
+# Environment Configuration
+default_environment: "{{ environment | default('dev') }}"
+default_region: "us-west-2"
+default_timezone: "UTC"
+
+# User Configuration
+default_user: "ec2-user"
+default_group: "ec2-user"
+admin_users:
+  - "ec2-user"
+  - "ansible"
+
+# Package Management
+package_manager: "yum"  # Amazon Linux 2
+update_packages: true
+install_development_tools: false
+
+# Security Configuration
+security_hardening: "{{ security_hardening | default(false) }}"
+firewall_enabled: true
+selinux_enabled: false
+fail2ban_enabled: true
+
+# SSH Configuration
+ssh_port: 22
+ssh_password_authentication: false
+ssh_root_login: false
+ssh_permit_empty_passwords: false
+
+# System Configuration
+hostname_format: "{{ project_name }}-{{ inventory_hostname }}"
+ntp_servers:
+  - "0.amazon.pool.ntp.org"
+  - "1.amazon.pool.ntp.org"
+  - "2.amazon.pool.ntp.org"
+  - "3.amazon.pool.ntp.org"
+
+# Logging Configuration
+log_level: "{{ log_level | default('info') }}"
+log_retention_days: 30
+log_rotation: true
+
+# Monitoring Configuration
+monitoring_enabled: "{{ monitoring_enabled | default(true) }}"
+prometheus_enabled: true
+grafana_enabled: true
+node_exporter_enabled: true
+
+# Backup Configuration
+backup_enabled: "{{ backup_enabled | default(false) }}"
+backup_retention_days: 7
+backup_schedule: "0 2 * * *"  # Daily at 2 AM
+
+# Network Configuration
+dns_servers:
+  - "169.254.169.253"  # Amazon DNS
+  - "8.8.8.8"
+  - "8.8.4.4"
+
+# Terraform Integration
+terraform_state_bucket: "{{ project_name }}-terraform-state"
+terraform_state_key: "{{ environment }}/terraform.tfstate"
+terraform_state_region: "{{ default_region }}"
+
+# AWS Configuration
+aws_region: "{{ default_region }}"
+aws_profile: "{{ project_name }}-{{ environment }}"
+
+# Kubernetes Configuration
+k8s_version: "1.28"
+k8s_cni: "amazon-vpc"
+k8s_csi_driver: "ebs"
+
+# Helm Configuration
+helm_version: "3.13.0"
+helm_repositories:
+  - name: "bitnami"
+    url: "https://charts.bitnami.com/bitnami"
+  - name: "prometheus-community"
+    url: "https://prometheus-community.github.io/helm-charts"
+  - name: "grafana"
+    url: "https://grafana.github.io/helm-charts"
+
+# Application Configuration
+app_namespace: "{{ project_name }}"
+app_replicas:
+  gateway: "{{ app_replicas.gateway | default(3) }}"
+  product: "{{ app_replicas.product | default(2) }}"
+  basket: "{{ app_replicas.basket | default(2) }}"
+  payment: "{{ app_replicas.payment | default(2) }}"
+
+# Database Configuration
+postgresql_host: "{{ terraform_outputs.rds_postgresql_endpoint }}"
+postgresql_port: "{{ terraform_outputs.rds_postgresql_port }}"
+postgresql_database: "product_service"
+postgresql_username: "postgres"
+
+mariadb_host: "{{ terraform_outputs.rds_mariadb_endpoint }}"
+mariadb_port: "{{ terraform_outputs.rds_mariadb_port }}"
+mariadb_database: "payment_service"
+mariadb_username: "payment"
+
+# Redis Configuration
+redis_host: "{{ terraform_outputs.elasticache_redis_endpoint }}"
+redis_port: "{{ terraform_outputs.elasticache_redis_port }}"
+redis_database: "0"
+
+# Kafka Configuration
+kafka_brokers: "{{ terraform_outputs.msk_cluster_bootstrap_brokers_tls }}"
+kafka_topics:
+  - "payment-events"
+  - "stock-events"
+  - "basket-events"
+
+# Domain Configuration
+domain_name: "{{ domain_name | default('obstools.local') }}"
+certificate_arn: "{{ certificate_arn | default('') }}"
+
+# Load Balancer Configuration
+load_balancer_type: "nlb"  # Network Load Balancer
+load_balancer_scheme: "internet-facing"
+load_balancer_cross_zone: true
+
+# Ingress Configuration
+ingress_class: "nginx"
+ingress_controller: "nginx-ingress"
+ingress_ssl_redirect: true
+ingress_hsts: true
+
+# Resource Limits
+resource_limits:
+  cpu: "1000m"
+  memory: "1Gi"
+  storage: "10Gi"
+
+resource_requests:
+  cpu: "250m"
+  memory: "256Mi"
+  storage: "1Gi"
+
+# Health Check Configuration
+health_check_path: "/health"
+health_check_interval: 30
+health_check_timeout: 10
+health_check_healthy_threshold: 2
+health_check_unhealthy_threshold: 3
+
+# Scaling Configuration
+hpa_enabled: true
+hpa_min_replicas: 1
+hpa_max_replicas: 100
+hpa_cpu_target: 80
+hpa_memory_target: 80
+
+# Security Context
+pod_security_context:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+container_security_context:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
