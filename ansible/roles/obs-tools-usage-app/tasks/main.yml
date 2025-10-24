@@ -1,0 +1,270 @@
+---
+# OBS Tools Usage Application role - Deploy microservices using Helm
+
+- name: "Add OBS Tools Usage Helm repository"
+  kubernetes.core.helm_repository:
+    name: obs-tools-usage
+    repo_url: "file://{{ helm_chart_path | default('/opt/obs-tools-usage/helm') }}"
+    state: present
+
+- name: "Create application namespace"
+  kubernetes.core.k8s:
+    name: "{{ app_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+    definition:
+      metadata:
+        name: "{{ app_namespace }}"
+        labels:
+          name: "{{ app_namespace }}"
+          app.kubernetes.io/name: "{{ project_name }}"
+          app.kubernetes.io/instance: "{{ project_name }}"
+          app.kubernetes.io/version: "{{ project_version }}"
+          app.kubernetes.io/managed-by: "Helm"
+
+- name: "Deploy OBS Tools Usage application"
+  kubernetes.core.helm:
+    name: "{{ project_name }}"
+    chart_ref: "{{ helm_chart_path | default('/opt/obs-tools-usage/helm') }}"
+    release_namespace: "{{ app_namespace }}"
+    create_namespace: false
+    values:
+      global:
+        imageRegistry: "{{ image_registry | default('') }}"
+        imagePullSecrets: "{{ image_pull_secrets | default([]) }}"
+        storageClass: "{{ storage_class | default('') }}"
+      
+      services:
+        gateway:
+          enabled: true
+          replicaCount: "{{ app_replicas.gateway }}"
+          image:
+            repository: "{{ gateway_image_repository | default('obstools/fiberv2-gateway') }}"
+            tag: "{{ gateway_image_tag | default('latest') }}"
+            pullPolicy: "{{ image_pull_policy | default('IfNotPresent') }}"
+          service:
+            type: "{{ service_type | default('LoadBalancer') }}"
+            port: 8080
+            annotations:
+              service.beta.kubernetes.io/aws-load-balancer-type: "{{ load_balancer_type }}"
+          resources:
+            limits:
+              cpu: "{{ resource_limits.cpu }}"
+              memory: "{{ resource_limits.memory }}"
+            requests:
+              cpu: "{{ resource_requests.cpu }}"
+              memory: "{{ resource_requests.memory }}"
+          env:
+            ENVIRONMENT: "{{ environment }}"
+            PORT: "8080"
+            LOG_LEVEL: "{{ log_level }}"
+            LOG_FORMAT: "json"
+            LOG_OUTPUT: "console"
+            PRODUCT_SERVICE_ENABLED: "true"
+            BASKET_SERVICE_ENABLED: "true"
+            PAYMENT_SERVICE_ENABLED: "true"
+            CIRCUIT_BREAKER_ENABLED: "true"
+            LOAD_BALANCER_ENABLED: "true"
+            LOAD_BALANCER_STRATEGY: "round_robin"
+            RATE_LIMIT_ENABLED: "true"
+            RATE_LIMIT_REQUESTS: "1000"
+            RATE_LIMIT_WINDOW: "1m"
+            RATE_LIMIT_BURST: "100"
+            HEALTH_CHECK_ENABLED: "true"
+            METRICS_ENABLED: "true"
+        
+        product:
+          enabled: true
+          replicaCount: "{{ app_replicas.product }}"
+          image:
+            repository: "{{ product_image_repository | default('obstools/product-service') }}"
+            tag: "{{ product_image_tag | default('latest') }}"
+            pullPolicy: "{{ image_pull_policy | default('IfNotPresent') }}"
+          service:
+            type: ClusterIP
+            port: 8080
+            grpcPort: 50050
+          resources:
+            limits:
+              cpu: "{{ resource_limits.cpu }}"
+              memory: "{{ resource_limits.memory }}"
+            requests:
+              cpu: "{{ resource_requests.cpu }}"
+              memory: "{{ resource_requests.memory }}"
+          env:
+            ENVIRONMENT: "{{ environment }}"
+            PORT: "8080"
+            LOG_LEVEL: "{{ log_level }}"
+            LOG_FORMAT: "json"
+            LOG_OUTPUT: "console"
+            DB_HOST: "{{ postgresql_host }}"
+            DB_PORT: "{{ postgresql_port }}"
+            DB_USER: "{{ postgresql_username }}"
+            DB_PASSWORD: "{{ postgresql_password | default('') }}"
+            DB_NAME: "{{ postgresql_database }}"
+            DB_SSL_MODE: "disable"
+        
+        basket:
+          enabled: true
+          replicaCount: "{{ app_replicas.basket }}"
+          image:
+            repository: "{{ basket_image_repository | default('obstools/basket-service') }}"
+            tag: "{{ basket_image_tag | default('latest') }}"
+            pullPolicy: "{{ image_pull_policy | default('IfNotPresent') }}"
+          service:
+            type: ClusterIP
+            port: 8081
+            grpcPort: 50051
+          resources:
+            limits:
+              cpu: "{{ resource_limits.cpu }}"
+              memory: "{{ resource_limits.memory }}"
+            requests:
+              cpu: "{{ resource_requests.cpu }}"
+              memory: "{{ resource_requests.memory }}"
+          env:
+            ENVIRONMENT: "{{ environment }}"
+            PORT: "8081"
+            LOG_LEVEL: "{{ log_level }}"
+            LOG_FORMAT: "json"
+            LOG_OUTPUT: "console"
+            REDIS_HOST: "{{ redis_host }}"
+            REDIS_PORT: "{{ redis_port }}"
+            REDIS_PASSWORD: "{{ redis_password | default('') }}"
+            REDIS_DB: "{{ redis_database }}"
+            PRODUCT_SERVICE_URL: "http://{{ project_name }}-product-service:8080"
+        
+        payment:
+          enabled: true
+          replicaCount: "{{ app_replicas.payment }}"
+          image:
+            repository: "{{ payment_image_repository | default('obstools/payment-service') }}"
+            tag: "{{ payment_image_tag | default('latest') }}"
+            pullPolicy: "{{ image_pull_policy | default('IfNotPresent') }}"
+          service:
+            type: ClusterIP
+            port: 8082
+            grpcPort: 50052
+          resources:
+            limits:
+              cpu: "{{ resource_limits.cpu }}"
+              memory: "{{ resource_limits.memory }}"
+            requests:
+              cpu: "{{ resource_requests.cpu }}"
+              memory: "{{ resource_requests.memory }}"
+          env:
+            ENVIRONMENT: "{{ environment }}"
+            PORT: "8082"
+            LOG_LEVEL: "{{ log_level }}"
+            LOG_FORMAT: "json"
+            LOG_OUTPUT: "console"
+            DB_HOST: "{{ mariadb_host }}"
+            DB_PORT: "{{ mariadb_port }}"
+            DB_USER: "{{ mariadb_username }}"
+            DB_PASSWORD: "{{ mariadb_password | default('') }}"
+            DB_NAME: "{{ mariadb_database }}"
+            DB_SSL_MODE: "false"
+            BASKET_SERVICE_URL: "http://{{ project_name }}-basket-service:8081"
+            PRODUCT_SERVICE_URL: "http://{{ project_name }}-product-service:8080"
+            KAFKA_BROKERS: "{{ kafka_brokers }}"
+      
+      # Database configurations
+      postgresql:
+        enabled: false  # Using external RDS
+      
+      redis:
+        enabled: false  # Using external ElastiCache
+      
+      mariadb:
+        enabled: false  # Using external RDS
+      
+      kafka:
+        enabled: false  # Using external MSK
+      
+      # Ingress configuration
+      ingress:
+        enabled: true
+        className: "{{ ingress_class }}"
+        annotations:
+          nginx.ingress.kubernetes.io/rewrite-target: /
+          nginx.ingress.kubernetes.io/ssl-redirect: "{{ ingress_ssl_redirect | lower }}"
+          nginx.ingress.kubernetes.io/rate-limit: "100"
+          nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+        hosts:
+          - host: "{{ domain_name }}"
+            paths:
+              - path: /
+                pathType: Prefix
+        tls: []
+      
+      # Monitoring
+      monitoring:
+        enabled: "{{ monitoring_enabled | lower }}"
+        serviceMonitor:
+          enabled: true
+          interval: 30s
+          scrapeTimeout: 10s
+      
+      # Security
+      security:
+        podSecurityContext:
+          fsGroup: 1000
+        containerSecurityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+      
+      # Network policies
+      networkPolicy:
+        enabled: true
+        ingress:
+          - from:
+              - namespaceSelector:
+                  matchLabels:
+                    name: kube-system
+            ports:
+              - protocol: TCP
+                port: 8080
+              - protocol: TCP
+                port: 50050
+      
+      # Autoscaling
+      autoscaling:
+        enabled: "{{ hpa_enabled | lower }}"
+        minReplicas: "{{ hpa_min_replicas }}"
+        maxReplicas: "{{ hpa_max_replicas }}"
+        targetCPUUtilizationPercentage: "{{ hpa_cpu_target }}"
+        targetMemoryUtilizationPercentage: "{{ hpa_memory_target }}"
+    
+    wait: true
+    timeout: 600
+    atomic: true
+
+- name: "Wait for application to be ready"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ app_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ project_name }}"
+  register: app_pods
+  until: app_pods.resources | length > 0
+  retries: 30
+  delay: 10
+
+- name: "Get application endpoint"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    namespace: "{{ app_namespace }}"
+    name: "{{ project_name }}-gateway"
+  register: gateway_service
+
+- name: "Set application endpoint"
+  set_fact:
+    app_endpoint: "{{ gateway_service.resources[0].status.loadBalancer.ingress[0].hostname if gateway_service.resources[0].status.loadBalancer.ingress is defined else 'localhost:8080' }}"
