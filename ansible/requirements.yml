@@ -1,0 +1,40 @@
+---
+# OBS Tools Usage - Ansible Requirements
+# This file defines the required Ansible collections and roles
+
+# Ansible Collections
+collections:
+  - name: kubernetes.core
+    version: ">=2.4.0"
+  - name: community.general
+    version: ">=7.0.0"
+  - name: community.aws
+    version: ">=6.0.0"
+  - name: amazon.aws
+    version: ">=6.0.0"
+  - name: community.docker
+    version: ">=3.0.0"
+
+# Ansible Roles (if using external roles)
+roles:
+  - name: geerlingguy.docker
+    version: "6.1.0"
+    src: https://github.com/geerlingguy/ansible-role-docker.git
+  - name: geerlingguy.security
+    version: "2.0.0"
+    src: https://github.com/geerlingguy/ansible-role-security.git
+  - name: geerlingguy.mysql
+    version: "3.4.0"
+    src: https://github.com/geerlingguy/ansible-role-mysql.git
+  - name: geerlingguy.postgresql
+    version: "3.2.0"
+    src: https://github.com/geerlingguy/ansible-role-postgresql.git
+  - name: geerlingguy.redis
+    version: "1.0.0"
+    src: https://github.com/geerlingguy/ansible-role-redis.git
+  - name: geerlingguy.prometheus
+    version: "1.0.0"
+    src: https://github.com/geerlingguy/ansible-role-prometheus.git
+  - name: geerlingguy.grafana
+    version: "1.0.0"
+    src: https://github.com/geerlingguy/ansible-role-grafana.git
