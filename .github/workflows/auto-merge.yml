@@ -1,0 +1,158 @@
+name: Auto Merge Bot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  # Auto-merge approved PRs
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action Bot"
+    
+    - name: Check if PR is auto-generated
+      id: check-auto-generated
+      run: |
+        if [[ "${{ github.event.pull_request.labels.*.name }}" == *"auto-generated"* ]]; then
+          echo "is_auto_generated=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_auto_generated=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Check PR status
+      id: check-status
+      run: |
+        # Check if all required status checks are passing
+        if [[ "${{ github.event.pull_request.mergeable_state }}" == "clean" ]]; then
+          echo "status_checks_passing=true" >> $GITHUB_OUTPUT
+        else
+          echo "status_checks_passing=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Auto-merge auto-generated PRs
+      if: steps.check-auto-generated.outputs.is_auto_generated == 'true' && steps.check-status.outputs.status_checks_passing == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Enable auto-merge for auto-generated PRs
+          await github.rest.pulls.enableAutoMerge({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+            merge_method: 'squash'
+          });
+          
+          // Add a comment
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: `## 🤖 Auto-Merge Enabled
+            
+            This auto-generated PR will be automatically merged once all checks pass.
+            
+            ### ✅ Status
+            - Auto-generated: ✅ Yes
+            - Status checks: ✅ Passing
+            - Merge method: Squash
+            - Auto-merge: ✅ Enabled
+            
+            ---
+            *Managed by GitHub Action Bot*`
+          });
+    
+    - name: Auto-merge approved PRs
+      if: steps.check-auto-generated.outputs.is_auto_generated == 'false' && steps.check-status.outputs.status_checks_passing == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Check if PR has been approved
+          const { data: reviews } = await github.rest.pulls.listReviews({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          const approved = reviews.some(review => review.state === 'APPROVED');
+          
+          if (approved) {
+            // Enable auto-merge for approved PRs
+            await github.rest.pulls.enableAutoMerge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'squash'
+            });
+            
+            // Add a comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ✅ Auto-Merge Enabled
+            
+            This PR has been approved and will be automatically merged once all checks pass.
+            
+            ### ✅ Status
+            - Approved: ✅ Yes
+            - Status checks: ✅ Passing
+            - Merge method: Squash
+            - Auto-merge: ✅ Enabled
+            
+            ---
+            *Managed by GitHub Action Bot*`
+            });
+          } else {
+            // Add a comment about waiting for approval
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ⏳ Waiting for Approval
+            
+            This PR is ready for review and will be automatically merged once approved.
+            
+            ### 📋 Status
+            - Approved: ❌ No
+            - Status checks: ✅ Passing
+            - Auto-merge: ⏳ Waiting for approval
+            
+            ---
+            *Managed by GitHub Action Bot*`
+            });
+          }
+    
+    - name: Update PR status
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Update PR with current status
+          const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          const status = {
+            auto_generated: ${{ steps.check-auto-generated.outputs.is_auto_generated }},
+            status_checks_passing: ${{ steps.check-status.outputs.status_checks_passing }},
+            mergeable: pr.mergeable,
+            mergeable_state: pr.mergeable_state,
+            auto_merge_enabled: pr.auto_merge !== null
+          };
+          
+          console.log('PR Status:', JSON.stringify(status, null, 2));
