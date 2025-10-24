@@ -1,0 +1,83 @@
+---
+# OBS Tools Usage - Main Ansible Playbook
+# This playbook orchestrates the complete infrastructure setup
+
+- name: "OBS Tools Usage - Infrastructure Setup"
+  hosts: all
+  become: true
+  gather_facts: true
+  
+  pre_tasks:
+    - name: "Update system packages"
+      package:
+        name: "*"
+        state: latest
+      when: update_packages | default(true)
+    
+    - name: "Install required packages"
+      package:
+        name:
+          - python3
+          - python3-pip
+          - curl
+          - wget
+          - unzip
+          - git
+          - htop
+          - vim
+        state: present
+    
+    - name: "Set timezone"
+      timezone:
+        name: "{{ default_timezone }}"
+    
+    - name: "Configure hostname"
+      hostname:
+        name: "{{ hostname_format }}"
+    
+    - name: "Configure NTP"
+      ntp:
+        servers: "{{ ntp_servers }}"
+        state: present
+
+  roles:
+    - role: common
+      tags: [common, system]
+    
+    - role: security
+      tags: [security, hardening]
+      when: security_hardening | default(false)
+    
+    - role: docker
+      tags: [docker, containers]
+    
+    - role: kubernetes
+      tags: [kubernetes, k8s]
+    
+    - role: helm
+      tags: [helm, package-manager]
+    
+    - role: monitoring
+      tags: [monitoring, observability]
+      when: monitoring_enabled | default(true)
+    
+    - role: backup
+      tags: [backup, disaster-recovery]
+      when: backup_enabled | default(false)
+
+  post_tasks:
+    - name: "Verify system configuration"
+      command: "systemctl is-system-running"
+      register: system_status
+      failed_when: system_status.rc != 0
+      changed_when: false
+    
+    - name: "Display system information"
+      debug:
+        msg: "System setup completed successfully"
+    
+    - name: "Create completion marker"
+      file:
+        path: "/etc/obs-tools-usage-setup-complete"
+        state: touch
+        mode: '0644'
