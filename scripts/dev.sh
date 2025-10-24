@@ -69,8 +69,16 @@ else
     exit 1
 fi
 
+go build -o bin/notification-service cmd/notification/main.go
+if [ $? -eq 0 ]; then
+    print_success "Notification service built successfully!"
+else
+    print_error "Failed to build notification service"
+    exit 1
+fi
+
 print_status "Starting dependencies with Docker Compose..."
-docker-compose up -d postgres redis
+docker-compose up -d postgres redis kafka zookeeper
 
 # Wait for PostgreSQL to be ready
 print_status "Waiting for PostgreSQL to be ready..."
@@ -95,6 +103,18 @@ until docker-compose exec redis redis-cli ping; do
 done
 
 print_success "Redis is ready!"
+
+# Wait for Kafka to be ready
+print_status "Waiting for Kafka to be ready..."
+sleep 10
+
+# Check if Kafka is ready
+until docker-compose exec kafka kafka-topics --bootstrap-server localhost:9092 --list; do
+    print_status "Waiting for Kafka..."
+    sleep 5
+done
+
+print_success "Kafka is ready!"
 
 # Set environment variables
 export ENVIRONMENT=development
@@ -121,6 +141,11 @@ print_status "gRPC API: localhost:50051"
 print_status "Health Check: http://localhost:8081/health"
 print_status "Metrics: http://localhost:8081/metrics"
 print_status ""
+print_status "=== NOTIFICATION SERVICE ==="
+print_status "HTTP API: http://localhost:8084"
+print_status "Health Check: http://localhost:8084/health"
+print_status "Metrics: http://localhost:8084/metrics"
+print_status ""
 print_status "Press Ctrl+C to stop all services"
 
 # Start services in background
@@ -130,11 +155,25 @@ PRODUCT_PID=$!
 ./bin/basket-service &
 BASKET_PID=$!
 
+# Set notification service environment variables
+export NOTIFICATION_PORT=8084
+export NOTIFICATION_DB_HOST=localhost
+export NOTIFICATION_DB_PORT=5432
+export NOTIFICATION_DB_USER=postgres
+export NOTIFICATION_DB_PASSWORD=password
+export NOTIFICATION_DB_NAME=notification_service
+export NOTIFICATION_DB_SSL_MODE=disable
+export NOTIFICATION_KAFKA_BROKERS=localhost:9092
+
+./bin/notification-service &
+NOTIFICATION_PID=$!
+
 # Function to cleanup background processes
 cleanup() {
     print_status "Stopping services..."
     kill $PRODUCT_PID 2>/dev/null || true
     kill $BASKET_PID 2>/dev/null || true
+    kill $NOTIFICATION_PID 2>/dev/null || true
     print_success "Services stopped!"
     exit 0
 }
