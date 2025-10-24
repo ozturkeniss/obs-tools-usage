@@ -41,6 +41,12 @@ build:
 	@chmod +x scripts/build.sh
 	@./scripts/build.sh
 
+# Build notification service
+.PHONY: build-notification
+build-notification:
+	@echo "Building notification service..."
+	go build -o bin/notification-service cmd/notification/main.go
+
 # Run tests
 .PHONY: test
 test:
